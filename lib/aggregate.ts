@@ -1,4 +1,4 @@
-import type { Channel, Reservation } from "./types";
+import type { Channel, Property, Reservation } from "./types";
 import {
   addDaysIso,
   daysBetweenIso,
@@ -353,6 +353,82 @@ export function buildDailySeries(
     });
   }
   return points;
+}
+
+// ---- Per-property breakdown for the selected range --------------------
+
+export interface PropertyRow {
+  propertyId: string;
+  propertyName: string;
+  city: string;
+  bookings: number;          // bookings with any night in range
+  occupiedNights: number;
+  daysInRange: number;
+  occupancyPct: number;
+  grossRevenue: number;      // apportioned by stayed-nights within range
+  commission: number;
+  netPayout: number;
+  adr: number;               // gross / occupied night
+}
+
+export function buildPropertyBreakdown(
+  reservations: Reservation[],
+  properties: Property[],
+  range: DateRange
+): PropertyRow[] {
+  const startInclusive = range.start;
+  const endExclusive = addDaysIso(range.end, 1);
+  const daysInRange = daysBetweenIso(range.start, range.end) + 1;
+
+  type Acc = {
+    bookings: Set<string>;
+    nights: number;
+    gross: number;
+    commission: number;
+    netPayout: number;
+  };
+  const map = new Map<string, Acc>();
+
+  for (const r of reservations) {
+    if (r.status !== "confirmed") continue;
+    const inStart = r.checkIn > startInclusive ? r.checkIn : startInclusive;
+    const inEnd   = r.checkOut < endExclusive ? r.checkOut : endExclusive;
+    if (inStart >= inEnd) continue;
+
+    const nightsInWindow = daysBetweenIso(inStart, inEnd);
+    const ratio = nightsInWindow / Math.max(1, r.nights);
+    const prev = map.get(r.propertyId) ?? {
+      bookings: new Set<string>(),
+      nights: 0, gross: 0, commission: 0, netPayout: 0,
+    };
+    prev.bookings.add(r.id);
+    prev.nights += nightsInWindow;
+    prev.gross += r.grossRevenue * ratio;
+    prev.commission += r.channelCommission * ratio;
+    prev.netPayout += r.netPayout * ratio;
+    map.set(r.propertyId, prev);
+  }
+
+  return properties
+    .map<PropertyRow>((p) => {
+      const v = map.get(p.id);
+      const nights = v?.nights ?? 0;
+      const gross  = v?.gross ?? 0;
+      return {
+        propertyId: p.id,
+        propertyName: p.name,
+        city: p.city,
+        bookings: v?.bookings.size ?? 0,
+        occupiedNights: nights,
+        daysInRange,
+        occupancyPct: daysInRange ? Math.round((nights / daysInRange) * 100) : 0,
+        grossRevenue: Math.round(gross),
+        commission: Math.round(v?.commission ?? 0),
+        netPayout: Math.round(v?.netPayout ?? 0),
+        adr: nights > 0 ? Math.round(gross / nights) : 0,
+      };
+    })
+    .sort((a, b) => b.grossRevenue - a.grossRevenue);
 }
 
 // ---- Channel commission (filtered to range, by check-in date) ---------

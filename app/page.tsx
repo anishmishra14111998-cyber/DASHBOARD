@@ -4,6 +4,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { DailyChart } from "@/components/DailyChart";
 import { ChannelCommissionTable } from "@/components/ChannelCommissionTable";
 import { NextMonthForecastPanel } from "@/components/NextMonthForecast";
+import { PropertyBreakdownTable } from "@/components/PropertyBreakdownTable";
 import { PropertyFilter } from "@/components/PropertyFilter";
 import { SourceStatusBar } from "@/components/SourceStatusBar";
 import { TimelineFilter } from "@/components/TimelineFilter";
@@ -13,6 +14,7 @@ import {
   buildDailySeries,
   buildNextMonthForecast,
   buildPeriodBases,
+  buildPropertyBreakdown,
   buildTodaySnapshot,
 } from "@/lib/aggregate";
 import {
@@ -86,6 +88,7 @@ export default function DashboardPage() {
   const daily = buildDailySeries(filtered.reservations, propertyCount, range);
   const channels = buildChannelCommission(filtered.reservations, range);
   const nextMonth = buildNextMonthForecast(filtered.reservations, propertyCount);
+  const propertyRows = buildPropertyBreakdown(filtered.reservations, filtered.properties, range);
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 p-6">
@@ -148,6 +151,8 @@ export default function DashboardPage() {
       <DailyChart data={daily} />
 
       <ChannelCommissionTable data={channels} />
+
+      <PropertyBreakdownTable data={propertyRows} rangeLabel={`${period.rangeLabel} · ${period.rangeStart} → ${period.rangeEnd}`} />
     </main>
   );
 }
