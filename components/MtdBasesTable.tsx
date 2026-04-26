@@ -1,4 +1,4 @@
-import type { MtdBases, MtdBasis } from "@/lib/aggregate";
+import type { PeriodBases, PeriodBasis } from "@/lib/aggregate";
 
 const fmt = (n: number) =>
   `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -29,17 +29,17 @@ const Row = ({
   );
 };
 
-export function MtdBasesTable({ data }: { data: MtdBases }) {
-  const cols: MtdBasis[] = [data.stayedNights, data.checkOut, data.checkIn];
+export function MtdBasesTable({ data }: { data: PeriodBases }) {
+  const cols: PeriodBasis[] = [data.stayedNights, data.checkOut, data.checkIn];
 
   return (
     <div className="rounded-xl border border-border bg-panel p-4">
       <div className="mb-4 flex items-baseline justify-between">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-          {data.monthLabel} MTD · 3 revenue bases
+          {data.rangeLabel} · 3 revenue bases
         </h2>
         <span className="text-xs text-muted">
-          {data.daysElapsed} days · occupancy {data.occupancyPct}% (
+          {data.rangeStart} → {data.rangeEnd} · {data.daysInRange} days · occupancy {data.occupancyPct}% (
           {data.stayedNights.nights} / {data.totalNightsAvailable} nights)
         </span>
       </div>

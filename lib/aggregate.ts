@@ -2,10 +2,9 @@ import type { Channel, Reservation } from "./types";
 import {
   addDaysIso,
   daysBetweenIso,
-  nyDayOfMonth,
   nyMonthLabel,
-  nyMonthStartIso,
   nyToday,
+  type DateRange,
 } from "./datetime";
 
 function isOccupiedOn(r: Reservation, day: string): boolean {
@@ -24,6 +23,13 @@ function nightlySplit(r: Reservation) {
     netPayout: r.netPayout / n,
   };
 }
+
+// Inclusive end → exclusive end for half-open interval math.
+function exclusiveEnd(range: DateRange): string {
+  return addDaysIso(range.end, 1);
+}
+
+// ---- Today snapshot (always literal today, never period-filtered) ------
 
 export interface TodaySnapshot {
   totalProperties: number;
@@ -71,7 +77,9 @@ export function buildTodaySnapshot(
   };
 }
 
-export interface MtdBasis {
+// ---- Period summary + three-basis breakdown ---------------------------
+
+export interface PeriodBasis {
   label: string;
   description: string;
   bookings: number;
@@ -86,17 +94,20 @@ export interface MtdBasis {
   netPayout: number;
 }
 
-export interface MtdBases {
-  monthLabel: string;
-  daysElapsed: number;
+export interface PeriodBases {
+  rangeLabel: string;          // "This week" / "Month to date"
+  rangeStart: string;          // YYYY-MM-DD
+  rangeEnd: string;            // YYYY-MM-DD
+  monthLabel: string;          // for the MTD-style header
+  daysInRange: number;
   totalNightsAvailable: number;
   occupancyPct: number;
-  stayedNights: MtdBasis;
-  checkOut: MtdBasis;
-  checkIn: MtdBasis;
+  stayedNights: PeriodBasis;
+  checkOut: PeriodBasis;
+  checkIn: PeriodBasis;
 }
 
-function emptyBasis(label: string, description: string): MtdBasis {
+function emptyBasis(label: string, description: string): PeriodBasis {
   return {
     label, description, bookings: 0,
     netAccommodation: 0, cleaningFare: 0, otherFees: 0, taxes: 0,
@@ -104,16 +115,18 @@ function emptyBasis(label: string, description: string): MtdBasis {
   };
 }
 
-function finalize(b: MtdBasis): MtdBasis {
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+function finalize(b: PeriodBasis): PeriodBasis {
   return {
     ...b,
-    netAccommodation: round2(b.netAccommodation),
-    cleaningFare: round2(b.cleaningFare),
-    otherFees: round2(b.otherFees),
-    taxes: round2(b.taxes),
-    grossRevenue: round2(b.grossRevenue),
-    commission: round2(b.commission),
-    netPayout: round2(b.netPayout),
+    netAccommodation: r2(b.netAccommodation),
+    cleaningFare: r2(b.cleaningFare),
+    otherFees: r2(b.otherFees),
+    taxes: r2(b.taxes),
+    grossRevenue: r2(b.grossRevenue),
+    commission: r2(b.commission),
+    netPayout: r2(b.netPayout),
     commissionPct:
       b.grossRevenue > 0
         ? Math.round((b.commission / b.grossRevenue) * 10000) / 100
@@ -121,39 +134,35 @@ function finalize(b: MtdBasis): MtdBasis {
   };
 }
 
-function round2(n: number) {
-  return Math.round(n * 100) / 100;
-}
-
-export function buildMtdBases(
+export function buildPeriodBases(
   reservations: Reservation[],
-  propertyCount: number
-): MtdBases {
-  const today = nyToday();
-  const monthStartIso = nyMonthStartIso();
-  const tomorrow = addDaysIso(today, 1);
-  const daysElapsed = nyDayOfMonth();
+  propertyCount: number,
+  range: DateRange
+): PeriodBases {
+  const rangeStart = range.start;
+  const rangeEndExclusive = exclusiveEnd(range);
+  const daysInRange = daysBetweenIso(range.start, range.end) + 1;
 
   const stayed = emptyBasis(
     "Stayed-nights",
-    `Apportioned by nights occupied within ${monthStartIso} → ${today}`
+    `Apportioned by nights occupied within ${range.start} → ${range.end}`
   );
   const checkOut = emptyBasis(
     "Check-out basis",
-    `Reservations whose checkout falls within ${monthStartIso} → ${today}`
+    `Reservations whose checkout falls within ${range.start} → ${range.end}`
   );
   const checkIn = emptyBasis(
     "Check-in basis",
-    `Reservations whose check-in falls within ${monthStartIso} → ${today}`
+    `Reservations whose check-in falls within ${range.start} → ${range.end}`
   );
   let stayedNightsTotal = 0;
 
   for (const r of reservations) {
     if (r.status !== "confirmed") continue;
 
-    // 1. Stayed-nights basis (apportion across nights in window)
-    const inStart = r.checkIn > monthStartIso ? r.checkIn : monthStartIso;
-    const inEnd = r.checkOut < tomorrow ? r.checkOut : tomorrow;
+    // 1. Stayed-nights (apportion across nights in window)
+    const inStart = r.checkIn > rangeStart ? r.checkIn : rangeStart;
+    const inEnd = r.checkOut < rangeEndExclusive ? r.checkOut : rangeEndExclusive;
     if (inStart < inEnd) {
       const nightsInWindow = daysBetweenIso(inStart, inEnd);
       const ratio = nightsInWindow / Math.max(1, r.nights);
@@ -168,8 +177,8 @@ export function buildMtdBases(
       stayedNightsTotal      += nightsInWindow;
     }
 
-    // 2. Check-out basis (full reservation if checkout in window)
-    if (r.checkOut >= monthStartIso && r.checkOut <= today) {
+    // 2. Check-out basis
+    if (r.checkOut >= range.start && r.checkOut <= range.end) {
       checkOut.netAccommodation += r.netAccommodation;
       checkOut.cleaningFare    += r.cleaningFare;
       checkOut.otherFees       += r.otherFees;
@@ -180,8 +189,8 @@ export function buildMtdBases(
       checkOut.bookings        += 1;
     }
 
-    // 3. Check-in basis (full reservation if check-in in window)
-    if (r.checkIn >= monthStartIso && r.checkIn <= today) {
+    // 3. Check-in basis
+    if (r.checkIn >= range.start && r.checkIn <= range.end) {
       checkIn.netAccommodation += r.netAccommodation;
       checkIn.cleaningFare    += r.cleaningFare;
       checkIn.otherFees       += r.otherFees;
@@ -194,11 +203,14 @@ export function buildMtdBases(
   }
 
   stayed.nights = stayedNightsTotal;
-  const totalNightsAvailable = propertyCount * daysElapsed;
+  const totalNightsAvailable = propertyCount * daysInRange;
 
   return {
+    rangeLabel: range.label,
+    rangeStart: range.start,
+    rangeEnd: range.end,
     monthLabel: nyMonthLabel(),
-    daysElapsed,
+    daysInRange,
     totalNightsAvailable,
     occupancyPct: totalNightsAvailable
       ? Math.round((stayedNightsTotal / totalNightsAvailable) * 100)
@@ -208,6 +220,8 @@ export function buildMtdBases(
     checkIn: finalize(checkIn),
   };
 }
+
+// ---- Daily series (one point per day in range) ------------------------
 
 export interface DailyPoint {
   date: string;
@@ -220,16 +234,24 @@ export interface DailyPoint {
   occupancyPct: number;
 }
 
+// Cap chart density so very long ranges stay legible.
+const MAX_DAILY_POINTS = 90;
+
 export function buildDailySeries(
   reservations: Reservation[],
   propertyCount: number,
-  days = 30
+  range: DateRange
 ): DailyPoint[] {
-  const today = nyToday();
+  const totalDays = daysBetweenIso(range.start, range.end) + 1;
   const points: DailyPoint[] = [];
 
-  for (let i = days - 1; i >= 0; i--) {
-    const day = addDaysIso(today, -i);
+  // For ranges longer than MAX_DAILY_POINTS, we'd downsample — for now just truncate
+  // to the most recent MAX_DAILY_POINTS days so the chart stays readable.
+  const days = Math.min(totalDays, MAX_DAILY_POINTS);
+  const start = totalDays > MAX_DAILY_POINTS ? addDaysIso(range.end, -(days - 1)) : range.start;
+
+  for (let i = 0; i < days; i++) {
+    const day = addDaysIso(start, i);
     const labelDate = new Date(`${day}T12:00:00Z`);
     let revenue = 0;
     let commission = 0;
@@ -264,6 +286,8 @@ export function buildDailySeries(
   return points;
 }
 
+// ---- Channel commission (filtered to range, by check-in date) ---------
+
 export interface ChannelCommissionPoint {
   channel: Channel;
   bookings: number;
@@ -274,11 +298,13 @@ export interface ChannelCommissionPoint {
 }
 
 export function buildChannelCommission(
-  reservations: Reservation[]
+  reservations: Reservation[],
+  range?: DateRange
 ): ChannelCommissionPoint[] {
   const map = new Map<Channel, { bookings: number; gross: number; commission: number; netPayout: number }>();
   for (const r of reservations) {
     if (r.status !== "confirmed") continue;
+    if (range && (r.checkIn < range.start || r.checkIn > range.end)) continue;
     const prev = map.get(r.channel) ?? { bookings: 0, gross: 0, commission: 0, netPayout: 0 };
     prev.bookings += 1;
     prev.gross += r.grossRevenue;

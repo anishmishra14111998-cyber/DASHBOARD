@@ -5,14 +5,20 @@ import { DailyChart } from "@/components/DailyChart";
 import { ChannelCommissionTable } from "@/components/ChannelCommissionTable";
 import { PropertyFilter } from "@/components/PropertyFilter";
 import { SourceStatusBar } from "@/components/SourceStatusBar";
+import { TimelineFilter } from "@/components/TimelineFilter";
 import { MtdBasesTable } from "@/components/MtdBasesTable";
 import {
   buildChannelCommission,
   buildDailySeries,
-  buildMtdBases,
+  buildPeriodBases,
   buildTodaySnapshot,
 } from "@/lib/aggregate";
-import { nyTimeLabel, nyWeekdayDateLabel } from "@/lib/datetime";
+import {
+  nyTimeLabel,
+  nyWeekdayDateLabel,
+  rangeForPreset,
+  type DateRange,
+} from "@/lib/datetime";
 import type { MetricsResponse } from "@/lib/types";
 
 const REFRESH_MS = 15 * 60 * 1000;
@@ -24,6 +30,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [propertyId, setPropertyId] = useState<string>("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [range, setRange] = useState<DateRange>(() => rangeForPreset("this-month"));
 
   async function load() {
     setRefreshing(true);
@@ -73,9 +80,9 @@ export default function DashboardPage() {
 
   const propertyCount = filtered.properties.length;
   const today = buildTodaySnapshot(filtered.reservations, propertyCount);
-  const mtd = buildMtdBases(filtered.reservations, propertyCount);
-  const daily = buildDailySeries(filtered.reservations, propertyCount, 30);
-  const channels = buildChannelCommission(filtered.reservations);
+  const period = buildPeriodBases(filtered.reservations, propertyCount, range);
+  const daily = buildDailySeries(filtered.reservations, propertyCount, range);
+  const channels = buildChannelCommission(filtered.reservations, range);
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 p-6">
@@ -117,19 +124,21 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      <TimelineFilter value={range} onChange={setRange} />
+
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-          Month to date · {mtd.monthLabel} ({mtd.daysElapsed} days · NY)
+          {period.rangeLabel} · {period.rangeStart} → {period.rangeEnd} ({period.daysInRange} days)
         </h2>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <MetricCard label="Gross Revenue MTD" value={fmtMoney(mtd.stayedNights.grossRevenue)} sub="stayed-nights basis" />
-          <MetricCard label="Commission MTD" value={fmtMoney(mtd.stayedNights.commission)} sub={`${mtd.stayedNights.commissionPct}% of gross`} tone="bad" />
-          <MetricCard label="Net Payout MTD" value={fmtMoney(mtd.stayedNights.netPayout)} sub={`${mtd.stayedNights.bookings} bookings touched`} tone="good" />
-          <MetricCard label="Occupancy MTD" value={`${mtd.occupancyPct}%`} sub={`${mtd.stayedNights.nights} / ${mtd.totalNightsAvailable} nights`} />
+          <MetricCard label="Gross Revenue" value={fmtMoney(period.stayedNights.grossRevenue)} sub="stayed-nights basis" />
+          <MetricCard label="Commission" value={fmtMoney(period.stayedNights.commission)} sub={`${period.stayedNights.commissionPct}% of gross`} tone="bad" />
+          <MetricCard label="Net Payout" value={fmtMoney(period.stayedNights.netPayout)} sub={`${period.stayedNights.bookings} bookings touched`} tone="good" />
+          <MetricCard label="Occupancy" value={`${period.occupancyPct}%`} sub={`${period.stayedNights.nights} / ${period.totalNightsAvailable} nights`} />
         </div>
       </section>
 
-      <MtdBasesTable data={mtd} />
+      <MtdBasesTable data={period} />
 
       <DailyChart data={daily} />
 
