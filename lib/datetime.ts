@@ -103,6 +103,19 @@ export function nyLastMonthRange(d: Date = new Date()): { start: string; end: st
   return { start, end };
 }
 
+export function nyNextMonthRange(d: Date = new Date()): { start: string; end: string; label: string } {
+  const today = nyToday(d);
+  const [y, m] = today.split("-").map(Number);
+  const nextMonth = m === 12 ? 1 : m + 1;
+  const nextYear = m === 12 ? y + 1 : y;
+  const start = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+  const lastDay = new Date(Date.UTC(nextYear, nextMonth, 0)).getUTCDate();
+  const end = `${nextYear}-${String(nextMonth).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  const label = new Date(Date.UTC(nextYear, nextMonth - 1, 1))
+    .toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
+  return { start, end, label };
+}
+
 export type PresetId =
   | "today"
   | "yesterday"

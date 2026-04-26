@@ -3,6 +3,7 @@ import {
   addDaysIso,
   daysBetweenIso,
   nyMonthLabel,
+  nyNextMonthRange,
   nyToday,
   type DateRange,
 } from "./datetime";
@@ -218,6 +219,74 @@ export function buildPeriodBases(
     stayedNights: finalize(stayed),
     checkOut: finalize(checkOut),
     checkIn: finalize(checkIn),
+  };
+}
+
+// ---- Next month forecast (revenue already booked + forecasted occupancy) ---
+
+export interface NextMonthForecast {
+  monthLabel: string;
+  start: string;
+  end: string;
+  daysInMonth: number;
+  totalProperties: number;
+  bookings: number;
+  occupiedNights: number;
+  totalNightsAvailable: number;
+  occupancyPct: number;
+  bookedRevenue: number;       // gross
+  bookedNetPayout: number;
+  bookedCommission: number;
+  adr: number;                 // gross / occupied nights
+}
+
+export function buildNextMonthForecast(
+  reservations: Reservation[],
+  propertyCount: number
+): NextMonthForecast {
+  const r = nyNextMonthRange();
+  const startInclusive = r.start;
+  const endExclusive = addDaysIso(r.end, 1);
+  const daysInMonth = daysBetweenIso(r.start, r.end) + 1;
+
+  let occupiedNights = 0;
+  let bookedRevenue = 0;
+  let bookedNet = 0;
+  let bookedCommission = 0;
+  const bookingIds = new Set<string>();
+
+  for (const res of reservations) {
+    if (res.status !== "confirmed") continue;
+    const inStart = res.checkIn > startInclusive ? res.checkIn : startInclusive;
+    const inEnd   = res.checkOut < endExclusive ? res.checkOut : endExclusive;
+    if (inStart >= inEnd) continue;
+
+    const nightsInWindow = daysBetweenIso(inStart, inEnd);
+    const ratio = nightsInWindow / Math.max(1, res.nights);
+    occupiedNights   += nightsInWindow;
+    bookedRevenue    += res.grossRevenue * ratio;
+    bookedNet        += res.netPayout * ratio;
+    bookedCommission += res.channelCommission * ratio;
+    bookingIds.add(res.id);
+  }
+
+  const totalNightsAvailable = propertyCount * daysInMonth;
+  return {
+    monthLabel: r.label,
+    start: r.start,
+    end: r.end,
+    daysInMonth,
+    totalProperties: propertyCount,
+    bookings: bookingIds.size,
+    occupiedNights,
+    totalNightsAvailable,
+    occupancyPct: totalNightsAvailable
+      ? Math.round((occupiedNights / totalNightsAvailable) * 100)
+      : 0,
+    bookedRevenue: Math.round(bookedRevenue),
+    bookedNetPayout: Math.round(bookedNet),
+    bookedCommission: Math.round(bookedCommission),
+    adr: occupiedNights > 0 ? Math.round(bookedRevenue / occupiedNights) : 0,
   };
 }
 

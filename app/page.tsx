@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { BrandHeader } from "@/components/BrandHeader";
 import { MetricCard } from "@/components/MetricCard";
 import { DailyChart } from "@/components/DailyChart";
 import { ChannelCommissionTable } from "@/components/ChannelCommissionTable";
+import { NextMonthForecastPanel } from "@/components/NextMonthForecast";
 import { PropertyFilter } from "@/components/PropertyFilter";
 import { SourceStatusBar } from "@/components/SourceStatusBar";
 import { TimelineFilter } from "@/components/TimelineFilter";
@@ -10,6 +12,7 @@ import { MtdBasesTable } from "@/components/MtdBasesTable";
 import {
   buildChannelCommission,
   buildDailySeries,
+  buildNextMonthForecast,
   buildPeriodBases,
   buildTodaySnapshot,
 } from "@/lib/aggregate";
@@ -67,15 +70,23 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <main className="mx-auto max-w-7xl p-6">
-        <div className="rounded-xl border border-bad bg-panel p-4 text-bad">
-          Failed to load metrics: {error}
-        </div>
-      </main>
+      <>
+        <BrandHeader />
+        <main className="mx-auto max-w-7xl p-6">
+          <div className="rounded-xl border border-bad bg-panel p-4 text-bad">
+            Failed to load metrics: {error}
+          </div>
+        </main>
+      </>
     );
   }
   if (!data || !filtered) {
-    return <main className="mx-auto max-w-7xl p-6 text-muted">Loading dashboard…</main>;
+    return (
+      <>
+        <BrandHeader />
+        <main className="mx-auto max-w-7xl p-6 text-muted">Loading dashboard…</main>
+      </>
+    );
   }
 
   const propertyCount = filtered.properties.length;
@@ -83,34 +94,37 @@ export default function DashboardPage() {
   const period = buildPeriodBases(filtered.reservations, propertyCount, range);
   const daily = buildDailySeries(filtered.reservations, propertyCount, range);
   const channels = buildChannelCommission(filtered.reservations, range);
+  const nextMonth = buildNextMonthForecast(filtered.reservations, propertyCount);
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 p-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Revenue Dashboard</h1>
-          <p className="text-sm text-muted">
-            Live Guesty data · America/New_York · auto-refresh 15min ·{" "}
-            <span className="text-text">{nyTimeLabel(new Date(data.generatedAt))}</span>
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={load}
-            disabled={refreshing}
-            className="rounded-lg border border-border bg-panel px-3 py-2 text-sm text-text hover:bg-panel2 disabled:opacity-50"
-          >
-            {refreshing ? "Refreshing…" : "Refresh now"}
-          </button>
-          <PropertyFilter
-            properties={data.properties}
-            value={propertyId}
-            onChange={setPropertyId}
-          />
-        </div>
-      </header>
+    <>
+      <BrandHeader />
+      <main className="mx-auto max-w-7xl space-y-6 p-6">
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-muted">Revenue Dashboard</p>
+            <p className="mt-1 text-sm text-muted">
+              Live Guesty data · America/New_York · auto-refresh 15min ·{" "}
+              <span className="text-text">{nyTimeLabel(new Date(data.generatedAt))}</span>
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={load}
+              disabled={refreshing}
+              className="rounded-lg border border-border bg-panel px-3 py-2 text-sm text-text hover:bg-panel2 disabled:opacity-50"
+            >
+              {refreshing ? "Refreshing…" : "Refresh now"}
+            </button>
+            <PropertyFilter
+              properties={data.properties}
+              value={propertyId}
+              onChange={setPropertyId}
+            />
+          </div>
+        </header>
 
-      <SourceStatusBar guesty={data.sources.guesty} />
+        <SourceStatusBar guesty={data.sources.guesty} />
 
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
@@ -138,11 +152,14 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <MtdBasesTable data={period} />
+        <NextMonthForecastPanel data={nextMonth} />
 
-      <DailyChart data={daily} />
+        <MtdBasesTable data={period} />
 
-      <ChannelCommissionTable data={channels} />
-    </main>
+        <DailyChart data={daily} />
+
+        <ChannelCommissionTable data={channels} />
+      </main>
+    </>
   );
 }
