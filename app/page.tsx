@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { BrandHeader } from "@/components/BrandHeader";
 import { MetricCard } from "@/components/MetricCard";
 import { DailyChart } from "@/components/DailyChart";
 import { ChannelCommissionTable } from "@/components/ChannelCommissionTable";
@@ -70,23 +69,15 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <>
-        <BrandHeader />
-        <main className="mx-auto max-w-7xl p-6">
-          <div className="rounded-xl border border-bad bg-panel p-4 text-bad">
-            Failed to load metrics: {error}
-          </div>
-        </main>
-      </>
+      <main className="mx-auto max-w-7xl p-6">
+        <div className="rounded-xl border border-bad bg-panel p-4 text-bad">
+          Failed to load metrics: {error}
+        </div>
+      </main>
     );
   }
   if (!data || !filtered) {
-    return (
-      <>
-        <BrandHeader />
-        <main className="mx-auto max-w-7xl p-6 text-muted">Loading dashboard…</main>
-      </>
-    );
+    return <main className="mx-auto max-w-7xl p-6 text-muted">Loading dashboard…</main>;
   }
 
   const propertyCount = filtered.properties.length;
@@ -97,34 +88,32 @@ export default function DashboardPage() {
   const nextMonth = buildNextMonthForecast(filtered.reservations, propertyCount);
 
   return (
-    <>
-      <BrandHeader />
-      <main className="mx-auto max-w-7xl space-y-6 p-6">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-muted">Revenue Dashboard</p>
-            <p className="mt-1 text-sm text-muted">
-              Live Guesty data · America/New_York · auto-refresh 15min ·{" "}
-              <span className="text-text">{nyTimeLabel(new Date(data.generatedAt))}</span>
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={load}
-              disabled={refreshing}
-              className="rounded-lg border border-border bg-panel px-3 py-2 text-sm text-text hover:bg-panel2 disabled:opacity-50"
-            >
-              {refreshing ? "Refreshing…" : "Refresh now"}
-            </button>
-            <PropertyFilter
-              properties={data.properties}
-              value={propertyId}
-              onChange={setPropertyId}
-            />
-          </div>
-        </header>
+    <main className="mx-auto max-w-7xl space-y-6 p-6">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted">Revenue Dashboard</p>
+          <p className="mt-1 text-sm text-muted">
+            Live Guesty data · America/New_York · auto-refresh 15min ·{" "}
+            <span className="text-text">{nyTimeLabel(new Date(data.generatedAt))}</span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={load}
+            disabled={refreshing}
+            className="rounded-lg border border-border bg-panel px-3 py-2 text-sm text-text hover:bg-panel2 disabled:opacity-50"
+          >
+            {refreshing ? "Refreshing…" : "Refresh now"}
+          </button>
+          <PropertyFilter
+            properties={data.properties}
+            value={propertyId}
+            onChange={setPropertyId}
+          />
+        </div>
+      </header>
 
-        <SourceStatusBar guesty={data.sources.guesty} />
+      <SourceStatusBar guesty={data.sources.guesty} />
 
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
@@ -152,14 +141,13 @@ export default function DashboardPage() {
         </div>
       </section>
 
-        <NextMonthForecastPanel data={nextMonth} />
+      <NextMonthForecastPanel data={nextMonth} />
 
-        <MtdBasesTable data={period} />
+      <MtdBasesTable data={period} />
 
-        <DailyChart data={daily} />
+      <DailyChart data={daily} />
 
-        <ChannelCommissionTable data={channels} />
-      </main>
-    </>
+      <ChannelCommissionTable data={channels} />
+    </main>
   );
 }

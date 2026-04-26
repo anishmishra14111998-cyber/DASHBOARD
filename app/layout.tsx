@@ -1,15 +1,21 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { BrandHeader } from "@/components/BrandHeader";
+import { TabNav } from "@/components/TabNav";
 
 export const metadata: Metadata = {
-  title: "Revenue Dashboard",
-  description: "Live revenue & expenses across Guesty, Booking.com, and Airbnb",
+  title: "Coveted Hospitality · Operations",
+  description: "Revenue + cleaning dashboards for Coveted Hospitality",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <BrandHeader />
+        <TabNav />
+        {children}
+      </body>
     </html>
   );
 }
