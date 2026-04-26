@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { CleaningTable } from "@/components/CleaningTable";
 import type { CleaningData } from "@/lib/cleaning";
 
-const REFRESH_MS = 5 * 60 * 1000; // 5 minutes — matches server-side cache
+const REFRESH_MS = 30 * 1000; // 30s background poll; tab-focus also triggers a refresh
 
 type ViewKey = "monthly" | "weekly" | "costDetail";
 
@@ -38,7 +38,19 @@ export default function CleaningPage() {
   useEffect(() => {
     load();
     const id = setInterval(load, REFRESH_MS);
-    return () => clearInterval(id);
+    // Refetch immediately when the user comes back to this tab — covers the
+    // common "edit Google Sheet → flip to dashboard" workflow with no wait.
+    const onFocus = () => load();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   if (error) {
@@ -66,7 +78,7 @@ export default function CleaningPage() {
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted">Cleaning Dashboard</p>
           <p className="mt-1 text-sm text-muted">
-            Live from Google Sheets · auto-refresh 5min ·{" "}
+            Live from Google Sheets · auto-refresh 30s + on tab focus ·{" "}
             <span className="text-text">{new Date(data.generatedAt).toLocaleTimeString()}</span>
             {data.period.portfolio && (
               <>

@@ -12,9 +12,6 @@ const SHEETS = {
   costDetail: { gid: "197492965",  name: "Cost Detail (Weekly)" },
 } as const;
 
-// 5-minute server-side cache so frequent dashboard hits don't pummel Google.
-const REVALIDATE_SECONDS = 300;
-
 function csvUrl(gid: string): string {
   return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
 }
@@ -46,7 +43,9 @@ function parseCsv(text: string): string[][] {
 }
 
 async function fetchSheet(gid: string): Promise<string[][]> {
-  const res = await fetch(csvUrl(gid), { next: { revalidate: REVALIDATE_SECONDS } });
+  // No cache — we want edits in the Google Sheet to appear in the dashboard
+  // on the very next request (cost: ~150KB extra per refresh, fine at our scale).
+  const res = await fetch(csvUrl(gid), { cache: "no-store" });
   if (!res.ok) throw new Error(`Sheet fetch failed: ${res.status}`);
   return parseCsv(await res.text());
 }
