@@ -66,7 +66,7 @@ export default function GrossMarginPage() {
   if (!data) return <PageSkeleton />;
 
   const [jan, feb, mar] = data.months;
-  const { threeMonth } = data;
+  const { threeMonth, portfolio } = data;
 
   // Insight: biggest March jump
   const marVsJan = jan.gm1 > 0 ? Math.round((mar.gm1 / jan.gm1 - 1) * 100) : 0;
@@ -101,6 +101,86 @@ export default function GrossMarginPage() {
           </svg>
           {refreshing ? "Refreshing" : "Refresh"}
         </button>
+      </section>
+
+      {/* ── Portfolio Summary Header ── */}
+      <section className="space-y-4">
+        {/* 4-column KPI strip */}
+        <div className="overflow-hidden rounded-2xl border border-border shadow-soft">
+          <div className="grid grid-cols-2 md:grid-cols-4 bg-[#111c35]">
+            {[
+              { label: "M GROSS REVENUE",   tone: "border-white/10" },
+              { label: "M PLATFORM FEES",   tone: "border-white/10" },
+              { label: "M PERIOD RENT",     tone: "border-white/10" },
+              { label: "M GROSS MARGIN 1",  tone: "" },
+            ].map(({ label, tone }, i) => (
+              <div key={label} className={`px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70 ${i < 3 ? `border-r ${tone}` : "bg-[#1a4d3b]"}`}>
+                {label}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 bg-panel divide-x divide-border">
+            <div className="px-6 py-5">
+              <div className="tabular-nums text-2xl font-bold text-good">{fmt(portfolio.grossRevenue)}</div>
+              <div className="mt-2 text-[11px] italic text-muted">Self-managed: Airbnb + Other gross</div>
+            </div>
+            <div className="px-6 py-5">
+              <div className="tabular-nums text-2xl font-bold text-bad">{fmt(portfolio.platformFees)}</div>
+              <div className="mt-2 text-[11px] italic text-muted">Service fees + channel commission</div>
+            </div>
+            <div className="px-6 py-5">
+              <div className="tabular-nums text-2xl font-bold text-text">{fmt(portfolio.periodRent)}</div>
+              <div className="mt-2 text-[11px] italic text-muted">Pro-rated by month with revenue</div>
+            </div>
+            <div className="px-6 py-5">
+              <div className="tabular-nums text-2xl font-bold text-good">{fmt(portfolio.gm1)}</div>
+              <div className="mt-2 text-[11px] text-muted">
+                <span className="font-bold text-good">{portfolio.marginPct}%</span> GM1 Margin
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Monthly breakdown table */}
+        <div className="overflow-hidden rounded-2xl border border-border bg-panel shadow-soft">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-[#111c35]">
+                <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10 w-36">Month</th>
+                <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10">Net Revenue</th>
+                <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10">Period Rent</th>
+                <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10">GM1</th>
+                <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.16em] text-white/70">Margin %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[jan, feb, mar].map((m, i) => {
+                const rent = m.netRevenue - m.gm1;
+                const marginTone = m.marginPct >= 30 ? "text-good" : m.marginPct >= 10 ? "text-warn" : "text-bad";
+                const isBreakout = i === 2;
+                return (
+                  <tr key={m.month} className={`${i < 2 ? "border-b border-border/50" : ""} ${isBreakout ? "bg-good/5" : "hover:bg-panel2/30"} transition-colors`}>
+                    <td className="px-5 py-3.5 font-semibold text-text border-r border-border/40">
+                      {m.month}
+                      {isBreakout && <span className="ml-2 text-[9px] font-bold uppercase tracking-wider text-good">Best</span>}
+                    </td>
+                    <td className="px-5 py-3.5 text-right tabular-nums text-text border-r border-border/40">{fmt(m.netRevenue)}</td>
+                    <td className="px-5 py-3.5 text-right tabular-nums text-muted border-r border-border/40">{fmt(rent)}</td>
+                    <td className={`px-5 py-3.5 text-right tabular-nums font-semibold border-r border-border/40 ${m.gm1 >= 0 ? "text-good" : "text-bad"}`}>{fmt(m.gm1)}</td>
+                    <td className={`px-5 py-3.5 text-right tabular-nums font-bold ${marginTone}`}>{m.marginPct}%</td>
+                  </tr>
+                );
+              })}
+              <tr className="border-t-2 border-border bg-panel2/60 font-semibold text-sm">
+                <td className="px-5 py-3.5 text-text border-r border-border/40">3-Month Total</td>
+                <td className="px-5 py-3.5 text-right tabular-nums text-text border-r border-border/40">{fmt(threeMonth.netRevenue)}</td>
+                <td className="px-5 py-3.5 text-right tabular-nums text-muted border-r border-border/40">{fmt(threeMonth.netRevenue - threeMonth.gm1)}</td>
+                <td className="px-5 py-3.5 text-right tabular-nums text-good border-r border-border/40">{fmt(threeMonth.gm1)}</td>
+                <td className={`px-5 py-3.5 text-right tabular-nums font-bold ${threeMonth.marginPct >= 30 ? "text-good" : threeMonth.marginPct >= 10 ? "text-warn" : "text-bad"}`}>{threeMonth.marginPct}%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {/* ── 3-Month KPIs ── */}

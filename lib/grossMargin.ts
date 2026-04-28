@@ -61,8 +61,17 @@ export interface PropertyGmRow {
   threeMonthMarginPct: number;
 }
 
+export interface PortfolioSummary {
+  grossRevenue: number;
+  platformFees: number;
+  periodRent: number;
+  gm1: number;
+  marginPct: number;
+}
+
 export interface GrossMarginData {
   generatedAt: string;
+  portfolio: PortfolioSummary;
   threeMonth: {
     netRevenue: number;
     gm1: number;
@@ -82,9 +91,11 @@ export async function fetchGrossMarginData(): Promise<GrossMarginData> {
   let gm1Row: string[] = [];
   let propHeaderIdx = -1;
   let totalUnits = 0;
+  let portfolioValueRow: string[] = [];
 
   for (let i = 0; i < rows.length; i++) {
     const r0 = (rows[i]?.[0] ?? "").trim().toUpperCase();
+    if (r0 === "M GROSS REVENUE") portfolioValueRow = rows[i + 1] ?? [];
     if (r0.startsWith("JAN 2026")) {
       netRow = rows[i + 1] ?? [];
       gm1Row = rows[i + 3] ?? [];
@@ -131,8 +142,21 @@ export async function fetchGrossMarginData(): Promise<GrossMarginData> {
   const threeMonthNet = months.reduce((s, m) => s + m.netRevenue, 0);
   const threeMonthGm1 = months.reduce((s, m) => s + m.gm1, 0);
 
+  const pGross   = money(portfolioValueRow[0] ?? "");
+  const pFees    = money(portfolioValueRow[3] ?? "");
+  const pRent    = money(portfolioValueRow[6] ?? "");
+  const pGm1     = money(portfolioValueRow[9] ?? "");
+  const pMargin  = pGross ? Math.round((pGm1 / (pGross + pFees)) * 1000) / 10 : 0;
+
   return {
     generatedAt: new Date().toISOString(),
+    portfolio: {
+      grossRevenue: pGross,
+      platformFees: pFees,
+      periodRent: pRent,
+      gm1: pGm1,
+      marginPct: pMargin,
+    },
     threeMonth: {
       netRevenue: threeMonthNet, gm1: threeMonthGm1,
       marginPct: threeMonthNet ? Math.round((threeMonthGm1 / threeMonthNet) * 1000) / 10 : 0,
