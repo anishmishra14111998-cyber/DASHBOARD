@@ -103,39 +103,43 @@ export default function GrossMarginPage() {
         </button>
       </section>
 
-      {/* ── Portfolio Summary Header ── */}
+      {/* ── Portfolio Summary Header (Jan–Mar only) ── */}
       <section className="space-y-4">
         {/* 4-column KPI strip */}
         <div className="overflow-hidden rounded-2xl border border-border shadow-soft">
           <div className="grid grid-cols-2 md:grid-cols-4 bg-[#111c35]">
             {[
-              { label: "M GROSS REVENUE",   tone: "border-white/10" },
-              { label: "M PLATFORM FEES",   tone: "border-white/10" },
-              { label: "M PERIOD RENT",     tone: "border-white/10" },
-              { label: "M GROSS MARGIN 1",  tone: "" },
-            ].map(({ label, tone }, i) => (
-              <div key={label} className={`px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70 ${i < 3 ? `border-r ${tone}` : "bg-[#1a4d3b]"}`}>
+              { label: "M NET REVENUE",    cls: "border-r border-white/10" },
+              { label: "M PLATFORM FEES",  cls: "border-r border-white/10" },
+              { label: "M PERIOD RENT",    cls: "border-r border-white/10" },
+              { label: "M GROSS MARGIN 1", cls: "bg-[#1a4d3b]" },
+            ].map(({ label, cls }) => (
+              <div key={label} className={`px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70 ${cls}`}>
                 {label}
               </div>
             ))}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 bg-panel divide-x divide-border">
+            {/* Net Revenue = sum of monthly net revenues (Jan–Mar) */}
             <div className="px-6 py-5">
-              <div className="tabular-nums text-2xl font-bold text-good">{fmt(portfolio.grossRevenue)}</div>
-              <div className="mt-2 text-[11px] italic text-muted">Self-managed: Airbnb + Other gross</div>
+              <div className="tabular-nums text-2xl font-bold text-good">{fmt(threeMonth.netRevenue)}</div>
+              <div className="mt-2 text-[11px] italic text-muted">Airbnb + Other gross (Jan–Mar)</div>
             </div>
+            {/* Platform Fees: full-period figure from sheet — monthly split not available */}
             <div className="px-6 py-5">
               <div className="tabular-nums text-2xl font-bold text-bad">{fmt(portfolio.platformFees)}</div>
               <div className="mt-2 text-[11px] italic text-muted">Service fees + channel commission</div>
             </div>
+            {/* Period Rent = Net Revenue − GM1, Jan–Mar */}
             <div className="px-6 py-5">
-              <div className="tabular-nums text-2xl font-bold text-text">{fmt(portfolio.periodRent)}</div>
+              <div className="tabular-nums text-2xl font-bold text-text">{fmt(threeMonth.netRevenue - threeMonth.gm1)}</div>
               <div className="mt-2 text-[11px] italic text-muted">Pro-rated by month with revenue</div>
             </div>
+            {/* GM1 and margin, Jan–Mar */}
             <div className="px-6 py-5">
-              <div className="tabular-nums text-2xl font-bold text-good">{fmt(portfolio.gm1)}</div>
+              <div className="tabular-nums text-2xl font-bold text-good">{fmt(threeMonth.gm1)}</div>
               <div className="mt-2 text-[11px] text-muted">
-                <span className="font-bold text-good">{portfolio.marginPct}%</span> GM1 Margin
+                <span className="font-bold text-good">{threeMonth.marginPct}%</span> GM1 Margin
               </div>
             </div>
           </div>
