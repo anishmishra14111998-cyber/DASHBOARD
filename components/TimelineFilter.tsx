@@ -8,36 +8,32 @@ import {
 interface Props {
   value: DateRange;
   onChange: (r: DateRange) => void;
+  presets?: PresetId[];
 }
 
-const PRESETS: { id: PresetId; label: string }[] = [
-  { id: "today",       label: "Today" },
-  { id: "yesterday",   label: "Yesterday" },
-  { id: "this-week",   label: "This week" },
-  { id: "last-month",  label: "Last month" },
-  { id: "this-month",  label: "Month to date" },
+const DEFAULT_PRESETS: PresetId[] = [
+  "today",
+  "yesterday",
+  "this-week",
+  "last-month",
+  "this-month",
 ];
 
-const CalendarIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="text-accent"
-  >
-    <rect x="3" y="4" width="18" height="18" rx="2" />
-    <line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8"  y1="2" x2="8"  y2="6" />
-    <line x1="3"  y1="10" x2="21" y2="10" />
-  </svg>
-);
+const PRESET_LABELS: Record<PresetId, string> = {
+  "today":       "Today",
+  "yesterday":   "Yesterday",
+  "this-week":   "This week",
+  "last-7":      "Last 7 days",
+  "this-month":  "Month to date",
+  "last-month":  "Last month",
+  "last-30":     "Last 30 days",
+  "last-90":     "Last 90 days",
+  "all-time":    "All time",
+};
 
-export function TimelineFilter({ value, onChange }: Props) {
+export function TimelineFilter({ value, onChange, presets = DEFAULT_PRESETS }: Props) {
+  const presetList = presets.map((id) => ({ id, label: PRESET_LABELS[id] }));
+
   const isCustom = !value.preset;
 
   function setStart(start: string) {
@@ -60,71 +56,73 @@ export function TimelineFilter({ value, onChange }: Props) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-panel via-panel to-panel2/60 shadow-xl shadow-black/30">
-      <div className="flex flex-wrap items-center gap-3 border-b border-border/60 px-5 py-3">
-        <div className="flex items-center gap-2">
-          <CalendarIcon />
-          <span className="text-xs font-semibold uppercase tracking-wider text-text">
-            Date range
-          </span>
+    <div className="rounded-xl border border-border bg-panel p-3 shadow-soft">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">
+          Period
+        </span>
+
+        {/* Preset segmented control */}
+        <div className="inline-flex rounded-lg border border-border bg-panel2/60 p-1">
+          {presetList.map((p) => {
+            const active = value.preset === p.id;
+            return (
+              <button
+                key={p.id}
+                onClick={() => onChange(rangeForPreset(p.id))}
+                className={
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-150 " +
+                  (active
+                    ? "bg-accent text-white shadow-soft"
+                    : "text-muted hover:text-text")
+                }
+              >
+                {p.label}
+              </button>
+            );
+          })}
         </div>
-        <div className="ml-auto flex items-center gap-2 text-xs">
-          <span className={isCustom ? "text-accent" : "text-muted"}>
-            {isCustom ? "Custom range" : value.label}
-          </span>
-          <span className="rounded-md bg-panel2 px-2 py-0.5 font-mono text-accent">
-            {value.start}
-          </span>
-          <span className="text-muted">→</span>
-          <span className="rounded-md bg-panel2 px-2 py-0.5 font-mono text-accent">
-            {value.end}
-          </span>
-        </div>
-      </div>
 
-      <div className="flex flex-wrap items-center gap-2 px-5 py-4">
-        {PRESETS.map((p) => {
-          const active = value.preset === p.id;
-          return (
-            <button
-              key={p.id}
-              onClick={() => onChange(rangeForPreset(p.id))}
-              className={
-                "rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-150 " +
-                (active
-                  ? "bg-gradient-to-r from-accent to-[#7a9eff] text-white shadow-lg shadow-accent/40 ring-1 ring-accent/50"
-                  : "border border-border bg-panel2/60 text-muted hover:-translate-y-0.5 hover:border-accent/60 hover:bg-panel hover:text-text")
-              }
-            >
-              {p.label}
-            </button>
-          );
-        })}
+        <span className="mx-1 h-5 w-px bg-border" />
 
-        <div className="mx-2 h-6 w-px bg-border" />
-
+        {/* Custom range */}
         <div
           className={
-            "flex items-center gap-1.5 rounded-full px-3 py-1 transition-colors " +
-            (isCustom ? "bg-accent/10 ring-1 ring-accent/40" : "bg-transparent")
+            "flex items-center gap-1.5 rounded-lg border px-2 py-1 transition-colors " +
+            (isCustom
+              ? "border-accent/60 bg-accent/5"
+              : "border-border bg-panel2/40")
           }
         >
-          <span className="text-xs uppercase tracking-wider text-muted">Custom</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">
+            Custom
+          </span>
           <input
             type="date"
             value={value.start}
             max={value.end}
             onChange={(e) => setStart(e.target.value)}
-            className="rounded-md border border-border bg-panel2 px-2 py-1 text-xs text-text accent-accent focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40"
+            className="rounded-md border border-border bg-panel px-2 py-1 text-xs text-text accent-accent focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40"
           />
-          <span className="text-muted">→</span>
+          <span className="text-faint">→</span>
           <input
             type="date"
             value={value.end}
             min={value.start}
             onChange={(e) => setEnd(e.target.value)}
-            className="rounded-md border border-border bg-panel2 px-2 py-1 text-xs text-text accent-accent focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40"
+            className="rounded-md border border-border bg-panel px-2 py-1 text-xs text-text accent-accent focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/40"
           />
+        </div>
+
+        {/* Resolved range pinned right */}
+        <div className="ml-auto flex items-center gap-2 text-[11px] text-muted">
+          <span className={isCustom ? "text-accent" : "text-text"}>
+            {isCustom ? "Custom range" : value.label}
+          </span>
+          <span>·</span>
+          <span className="font-mono text-text">{value.start}</span>
+          <span>→</span>
+          <span className="font-mono text-text">{value.end}</span>
         </div>
       </div>
     </div>

@@ -1,7 +1,8 @@
-export type Channel = "guesty-direct" | "booking" | "airbnb" | "other";
+export type Channel = "guesty-direct" | "booking" | "airbnb" | "vrbo" | "other";
 
 export interface Reservation {
   id: string;
+  confirmationCode: string;
   channel: Channel;
   propertyId: string;
   propertyName: string;
@@ -21,6 +22,7 @@ export interface Reservation {
   currency: string;
 
   status: "confirmed" | "cancelled" | "pending";
+  createdAt?: string;   // ISO — when the reservation was booked (from Guesty createdAt)
 }
 
 export interface Property {

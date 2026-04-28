@@ -4,6 +4,7 @@ const labels: Record<ChannelCommissionPoint["channel"], string> = {
   "guesty-direct": "Direct",
   booking: "Booking.com",
   airbnb: "Airbnb",
+  vrbo: "Vrbo",
   other: "Other",
 };
 
@@ -25,42 +26,44 @@ export function ChannelCommissionTable({ data }: { data: ChannelCommissionPoint[
     : 0;
 
   return (
-    <div className="rounded-xl border border-border bg-panel p-4">
-      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted">
+    <section className="rounded-xl border border-border bg-panel p-6 shadow-soft">
+      <h2 className="mb-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         Commission by channel
       </h2>
-      <table className="w-full text-sm">
-        <thead className="text-xs uppercase tracking-wide text-muted">
-          <tr>
-            <th className="py-2 text-left  font-normal">Channel</th>
-            <th className="py-2 text-right font-normal">Bookings</th>
-            <th className="py-2 text-right font-normal">Gross</th>
-            <th className="py-2 text-right font-normal">Commission</th>
-            <th className="py-2 text-right font-normal">Comm %</th>
-            <th className="py-2 text-right font-normal">Net</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((d) => (
-            <tr key={d.channel} className="border-t border-border">
-              <td className="py-2">{labels[d.channel]}</td>
-              <td className="py-2 text-right text-muted">{d.bookings}</td>
-              <td className="py-2 text-right">{fmt(d.gross)}</td>
-              <td className="py-2 text-right text-bad">{fmt(d.commission)}</td>
-              <td className="py-2 text-right text-muted">{d.commissionPct}%</td>
-              <td className="py-2 text-right text-good">{fmt(d.net)}</td>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-[11px] uppercase tracking-wider text-faint">
+            <tr>
+              <th className="pb-3 text-left  font-medium">Channel</th>
+              <th className="pb-3 text-right font-medium">Bookings</th>
+              <th className="pb-3 text-right font-medium">Gross</th>
+              <th className="pb-3 text-right font-medium">Commission</th>
+              <th className="pb-3 text-right font-medium">Comm %</th>
+              <th className="pb-3 text-right font-medium">Net</th>
             </tr>
-          ))}
-          <tr className="border-t border-border font-medium">
-            <td className="py-2">Total</td>
-            <td className="py-2 text-right">{totals.bookings}</td>
-            <td className="py-2 text-right">{fmt(totals.gross)}</td>
-            <td className="py-2 text-right text-bad">{fmt(totals.commission)}</td>
-            <td className="py-2 text-right text-muted">{totalCommissionPct}%</td>
-            <td className="py-2 text-right text-good">{fmt(totals.net)}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {data.map((d) => (
+              <tr key={d.channel} className="border-t border-border/60 transition-colors hover:bg-panel2/40">
+                <td className="py-2.5 text-text">{labels[d.channel]}</td>
+                <td className="py-2.5 text-right tabular-nums text-muted">{d.bookings}</td>
+                <td className="py-2.5 text-right tabular-nums">{fmt(d.gross)}</td>
+                <td className="py-2.5 text-right tabular-nums text-bad">{fmt(d.commission)}</td>
+                <td className="py-2.5 text-right tabular-nums text-muted">{d.commissionPct}%</td>
+                <td className="py-2.5 text-right tabular-nums text-good">{fmt(d.net)}</td>
+              </tr>
+            ))}
+            <tr className="border-t-2 border-border bg-panel2/30 font-semibold">
+              <td className="py-3 text-text">Total</td>
+              <td className="py-3 text-right tabular-nums">{totals.bookings}</td>
+              <td className="py-3 text-right tabular-nums">{fmt(totals.gross)}</td>
+              <td className="py-3 text-right tabular-nums text-bad">{fmt(totals.commission)}</td>
+              <td className="py-3 text-right tabular-nums text-muted">{totalCommissionPct}%</td>
+              <td className="py-3 text-right tabular-nums text-good">{fmt(totals.net)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

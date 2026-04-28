@@ -32,6 +32,18 @@ function exclusiveEnd(range: DateRange): string {
 
 // ---- Today snapshot (always literal today, never period-filtered) ------
 
+export interface NewBookingToday {
+  id: string;
+  confirmationCode: string;
+  channel: string;
+  propertyName: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  grossRevenue: number;
+  isPaid: boolean;    // Airbnb = guaranteed paid; others pending
+}
+
 export interface TodaySnapshot {
   totalProperties: number;
   occupied: number;
@@ -41,6 +53,8 @@ export interface TodaySnapshot {
   todayCommission: number;
   todayNet: number;
   newBookingsToday: number;
+  paidNewBookingsToday: number;
+  newBookingsData: NewBookingToday[];
 }
 
 export function buildTodaySnapshot(
@@ -52,11 +66,28 @@ export function buildTodaySnapshot(
   let commission = 0;
   let netPayout = 0;
   const occupiedSet = new Set<string>();
-  let newBookings = 0;
+  const newBookingsData: NewBookingToday[] = [];
 
   for (const r of reservations) {
     if (r.status !== "confirmed") continue;
-    if (r.checkIn === today) newBookings += 1;
+
+    // A booking is "received today" if its createdAt date is today (NY time).
+    // Fall back to checkIn === today when createdAt isn't available (mock data).
+    const bookedDate = r.createdAt ? r.createdAt.slice(0, 10) : null;
+    if (bookedDate === today) {
+      newBookingsData.push({
+        id: r.id,
+        confirmationCode: r.confirmationCode,
+        channel: r.channel,
+        propertyName: r.propertyName,
+        checkIn: r.checkIn,
+        checkOut: r.checkOut,
+        nights: r.nights,
+        grossRevenue: r.grossRevenue,
+        isPaid: r.channel === "airbnb",
+      });
+    }
+
     if (!isOccupiedOn(r, today)) continue;
     occupiedSet.add(r.propertyId);
     const ns = nightlySplit(r);
@@ -74,7 +105,9 @@ export function buildTodaySnapshot(
     todayRevenue: Math.round(revenue),
     todayCommission: Math.round(commission),
     todayNet: Math.round(netPayout),
-    newBookingsToday: newBookings,
+    newBookingsToday: newBookingsData.length,
+    paidNewBookingsToday: newBookingsData.filter(b => b.isPaid).length,
+    newBookingsData,
   };
 }
 

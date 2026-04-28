@@ -47,8 +47,12 @@ export function generateReservations(channel: Channel, seed: number, count: numb
       channel === "guesty-direct" ? 0.03 : 0.05;
     const channelCommission = Math.round(netAccommodation * commissionRate);
 
+    // Booking date: simulate it was made 1-14 days before check-in.
+    const bookingDate = addDays(checkIn, -(1 + Math.floor(rand() * 14)));
     out.push({
       id: `${channel}-${seed}-${i}`,
+      confirmationCode: `MOCK-${channel.toUpperCase()}-${seed}-${i}`,
+      createdAt: bookingDate.toISOString(),
       channel,
       propertyId: prop.id,
       propertyName: prop.name,

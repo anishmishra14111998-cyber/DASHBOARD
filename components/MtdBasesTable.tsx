@@ -4,10 +4,7 @@ const fmt = (n: number) =>
   `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const Row = ({
-  label,
-  values,
-  bold,
-  tone,
+  label, values, bold, tone,
 }: {
   label: string;
   values: (string | number)[];
@@ -16,12 +13,12 @@ const Row = ({
 }) => {
   const cell = bold ? "font-semibold" : "";
   const toneCls =
-    tone === "good" ? "text-good" : tone === "bad" ? "text-bad" : tone === "muted" ? "text-muted" : "";
+    tone === "good" ? "text-good" : tone === "bad" ? "text-bad" : tone === "muted" ? "text-muted" : "text-text";
   return (
-    <tr className="border-t border-border">
-      <td className={`py-2 ${cell}`}>{label}</td>
+    <tr className="border-t border-border/60 transition-colors hover:bg-panel2/40">
+      <td className={"py-2.5 text-text " + cell}>{label}</td>
       {values.map((v, i) => (
-        <td key={i} className={`py-2 text-right ${cell} ${toneCls}`}>
+        <td key={i} className={"py-2.5 text-right tabular-nums " + cell + " " + toneCls}>
           {v}
         </td>
       ))}
@@ -33,32 +30,39 @@ export function MtdBasesTable({ data }: { data: PeriodBases }) {
   const cols: PeriodBasis[] = [data.stayedNights, data.checkOut, data.checkIn];
 
   return (
-    <div className="rounded-xl border border-border bg-panel p-4">
-      <div className="mb-4 flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-          {data.rangeLabel} · 3 revenue bases
-        </h2>
-        <span className="text-xs text-muted">
-          {data.rangeStart} → {data.rangeEnd} · {data.daysInRange} days · occupancy {data.occupancyPct}% (
-          {data.stayedNights.nights} / {data.totalNightsAvailable} nights)
+    <section className="rounded-xl border border-border bg-panel p-6 shadow-soft">
+      <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            Revenue bases
+          </p>
+          <h2 className="mt-1 text-base font-semibold tracking-tight text-text">
+            {data.rangeLabel}
+          </h2>
+        </div>
+        <span className="text-[11px] text-muted">
+          {data.rangeStart} → {data.rangeEnd} · {data.daysInRange} days · occupancy{" "}
+          <span className="text-text">{data.occupancyPct}%</span>{" "}
+          ({data.stayedNights.nights} / {data.totalNightsAvailable} nights)
         </span>
       </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs uppercase tracking-wide text-muted">
-              <th className="py-2 text-left  font-normal">&nbsp;</th>
-              <th className="py-2 text-right font-normal">
-                <div>Stayed-nights</div>
-                <div className="text-[10px] normal-case text-muted">GAAP — recommended</div>
+          <thead className="text-[11px] uppercase tracking-wider text-faint">
+            <tr>
+              <th className="pb-3 text-left  font-medium">&nbsp;</th>
+              <th className="pb-3 text-right font-medium">
+                <div className="text-text">Stayed-nights</div>
+                <div className="text-[10px] normal-case text-faint">GAAP — recommended</div>
               </th>
-              <th className="py-2 text-right font-normal">
-                <div>Check-out basis</div>
-                <div className="text-[10px] normal-case text-muted">bookings completed</div>
+              <th className="pb-3 text-right font-medium">
+                <div className="text-text">Check-out</div>
+                <div className="text-[10px] normal-case text-faint">bookings completed</div>
               </th>
-              <th className="py-2 text-right font-normal">
-                <div>Check-in basis</div>
-                <div className="text-[10px] normal-case text-muted">bookings started</div>
+              <th className="pb-3 text-right font-medium">
+                <div className="text-text">Check-in</div>
+                <div className="text-[10px] normal-case text-faint">bookings started</div>
               </th>
             </tr>
           </thead>
@@ -69,17 +73,17 @@ export function MtdBasesTable({ data }: { data: PeriodBases }) {
             <Row label="Other Fees"         values={cols.map((c) => fmt(c.otherFees))} />
             <Row label="Taxes"              values={cols.map((c) => fmt(c.taxes))} tone="muted" />
             <Row label="Gross Revenue"      values={cols.map((c) => fmt(c.grossRevenue))} bold />
-            <Row label="Channel Commission" values={cols.map((c) => `${fmt(c.commission)}  (${c.commissionPct}%)`)} tone="bad" />
+            <Row label="Channel Commission" values={cols.map((c) => `${fmt(c.commission)} (${c.commissionPct}%)`)} tone="bad" />
             <Row label="Net Payout"         values={cols.map((c) => fmt(c.netPayout))} bold tone="good" />
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs text-muted">
-        <strong className="text-text">Stayed-nights</strong> apportions each reservation's revenue across the
-        actual nights stayed within the period (recommended for revenue recognition).{" "}
-        <strong className="text-text">Check-out</strong> books the full reservation in the period it ended.{" "}
-        <strong className="text-text">Check-in</strong> books it in the period it began.
+
+      <p className="mt-4 text-[11px] text-muted">
+        <strong className="text-text">Stayed-nights</strong> apportions revenue across the actual nights stayed within the period.
+        {" "}<strong className="text-text">Check-out</strong> books each reservation in full when it ended.
+        {" "}<strong className="text-text">Check-in</strong> books it when it began.
       </p>
-    </div>
+    </section>
   );
 }

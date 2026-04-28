@@ -20,6 +20,7 @@ const LISTINGS_URL = "https://open-api.guesty.com/v1/listings";
 
 const RESERVATION_FIELDS = [
   "_id", "status", "source", "confirmationCode",
+  "createdAt",
   "integration.platform",
   "listingId", "listing.title", "listing.nickname",
   "checkIn", "checkOut", "nightsCount", "guestsCount",
@@ -196,16 +197,16 @@ async function fetchAllReservations(token: string): Promise<GuestyReservation[]>
   return all;
 }
 
-async function fetchAllListings(token: string): Promise<GuestyListing[]> {
+async function fetchAllListings(token: string, opts: { activeOnly?: boolean } = {}): Promise<GuestyListing[]> {
   const all: GuestyListing[] = [];
   const limit = 100;
   let skip = 0;
-  for (let page = 0; page < 20; page++) {
+  for (let page = 0; page < 30; page++) {
     const url = new URL(LISTINGS_URL);
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("skip", String(skip));
     url.searchParams.set("fields", LISTING_FIELDS);
-    url.searchParams.set("active", "true");
+    if (opts.activeOnly) url.searchParams.set("active", "true");
     const json = (await authedGet(url.toString(), token)) as {
       results: GuestyListing[];
       count: number;
@@ -216,6 +217,18 @@ async function fetchAllListings(token: string): Promise<GuestyListing[]> {
     skip += limit;
   }
   return all;
+}
+
+// Returns a Map of listingId -> displayable name. Includes inactive/archived
+// listings so historical reviews can show real property names instead of IDs.
+export async function fetchListingNamesAll(): Promise<Map<string, string>> {
+  const token = await (await import("./guestyToken")).fetchGuestyToken();
+  const listings = await fetchAllListings(token, { activeOnly: false });
+  const map = new Map<string, string>();
+  for (const l of listings) {
+    map.set(l._id, l.nickname ?? l.title ?? l._id);
+  }
+  return map;
 }
 
 export interface GuestyResult {
@@ -237,7 +250,7 @@ export async function fetchGuesty(): Promise<GuestyResult> {
     const token = await getAccessToken();
     const [rawReservations, rawListings] = await Promise.all([
       fetchAllReservations(token),
-      fetchAllListings(token),
+      fetchAllListings(token, { activeOnly: true }),
     ]);
     const reservations = rawReservations.map(mapGuestyReservation);
     const properties = rawListings.map(mapGuestyListing);
@@ -265,6 +278,8 @@ export async function fetchGuesty(): Promise<GuestyResult> {
 
 interface GuestyReservation {
   _id: string;
+  confirmationCode?: string;
+  createdAt?: string;
   source?: string;
   integration?: { platform?: string };
   listingId: string;
@@ -339,10 +354,12 @@ function detectChannel(r: GuestyReservation): Reservation["channel"] {
   const platform = (r.integration?.platform ?? "").toLowerCase();
   if (platform.startsWith("airbnb")) return "airbnb";
   if (platform.includes("booking")) return "booking";
+  if (platform.includes("homeaway") || platform.includes("vrbo") || platform.includes("expedia")) return "vrbo";
   if (platform) return "other";
   const src = (r.source ?? "").toLowerCase();
   if (src.includes("airbnb")) return "airbnb";
   if (src.includes("booking")) return "booking";
+  if (src.includes("vrbo") || src.includes("homeaway")) return "vrbo";
   return "guesty-direct";
 }
 
@@ -389,6 +406,8 @@ function mapGuestyReservation(r: GuestyReservation): Reservation {
 
   return {
     id: r._id,
+    confirmationCode: r.confirmationCode ?? "",
+    createdAt: r.createdAt,
     channel: detectChannel(r),
     propertyId: r.listingId,
     propertyName: r.listing?.nickname ?? r.listing?.title ?? r.listingId,

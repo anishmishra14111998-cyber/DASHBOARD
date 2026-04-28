@@ -124,7 +124,8 @@ export type PresetId =
   | "this-month"
   | "last-month"
   | "last-30"
-  | "last-90";
+  | "last-90"
+  | "all-time";
 
 export interface DateRange {
   start: string;        // YYYY-MM-DD, inclusive
@@ -156,6 +157,9 @@ export function rangeForPreset(preset: PresetId): DateRange {
       return { start: addDaysIso(today, -29), end: today, label: "Last 30 days", preset };
     case "last-90":
       return { start: addDaysIso(today, -89), end: today, label: "Last 90 days", preset };
+    case "all-time":
+      // Wide enough for any review history we have.
+      return { start: "2020-01-01", end: today, label: "All time", preset };
   }
 }
 

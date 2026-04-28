@@ -1,14 +1,17 @@
 import "./globals.css";
-import type { Metadata } from "next";
 import { BrandHeader } from "@/components/BrandHeader";
 import { TabNav } from "@/components/TabNav";
 
-export const metadata: Metadata = {
-  title: "Coveted Hospitality · Operations",
-  description: "Revenue + cleaning dashboards for Coveted Hospitality",
+export const metadata = {
+  title: "Coveted Hospitality",
+  description: "Revenue & operations dashboard",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body>
