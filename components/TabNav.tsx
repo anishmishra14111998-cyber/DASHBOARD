@@ -7,7 +7,8 @@ const TABS = [
   { href: "/",             label: "Revenue Dashboard" },
   { href: "/cleaning",     label: "Cleaning Dashboard" },
   { href: "/reviews",      label: "Reviews" },
-  { href: "/gross-margin", label: "Gross Margin" },
+  { href: "/gross-margin",  label: "Gross Margin" },
+  { href: "/cc-portfolio",  label: "CC Portfolio Monthly" },
 ];
 
 export function TabNav() {
