@@ -41,6 +41,8 @@ export function TabNav() {
             <Link
               key={t.href}
               href={t.href}
+              draggable={false}
+              onDragStart={e => e.preventDefault()}
               onMouseEnter={() => handleEnter(t.href, active)}
               onMouseLeave={() => { if (isDragging) setDragOver(null); }}
               className={[
