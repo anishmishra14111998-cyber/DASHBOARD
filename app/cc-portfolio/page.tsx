@@ -73,7 +73,7 @@ export default function CCPortfolioPage() {
   const topProp = sorted[0];
 
   return (
-    <main className="mx-auto max-w-7xl space-y-10 px-6 py-10 animate-fade-in">
+    <main className="mx-auto max-w-7xl space-y-8 sm:space-y-10 px-4 sm:px-6 py-6 sm:py-10 animate-fade-in">
 
       {/* ── Hero ── */}
       <section className="flex flex-wrap items-end justify-between gap-4">
@@ -81,10 +81,10 @@ export default function CCPortfolioPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-accent">
             CC Portfolio · Co-hosting
           </p>
-          <h1 className="mt-2 text-display-lg tracking-tight text-text">
+          <h1 className="mt-2 text-2xl sm:text-display-lg tracking-tight text-text">
             Monthly Revenue
-            <span className="ml-3 text-display text-muted font-normal">·</span>
-            <span className="ml-3 text-display text-good font-semibold tabular-nums">{fmt(threeMonth.net)}</span>
+            <span className="ml-2 sm:ml-3 text-xl sm:text-display text-muted font-normal">·</span>
+            <span className="ml-2 sm:ml-3 text-xl sm:text-display text-good font-semibold tabular-nums">{fmt(threeMonth.net)}</span>
           </h1>
           <p className="mt-1.5 text-sm text-muted">
             Jan–Mar 2026 · {threeMonth.unitCount} units · {threeMonth.propertyCount} properties ·{" "}
@@ -121,20 +121,20 @@ export default function CCPortfolioPage() {
           </div>
           {/* Values */}
           <div className="grid grid-cols-2 md:grid-cols-4 bg-panel divide-x divide-border">
-            <div className="px-6 py-5">
-              <div className="tabular-nums text-2xl font-bold text-good">{fmt(threeMonth.gross)}</div>
+            <div className="px-4 sm:px-6 py-4 sm:py-5">
+              <div className="tabular-nums text-xl sm:text-2xl font-bold text-good">{fmt(threeMonth.gross)}</div>
               <div className="mt-2 text-[11px] italic text-muted">Airbnb + other platforms (Jan–Mar)</div>
             </div>
-            <div className="px-6 py-5">
-              <div className="tabular-nums text-2xl font-bold text-bad">{fmt(threeMonth.fees)}</div>
+            <div className="px-4 sm:px-6 py-4 sm:py-5">
+              <div className="tabular-nums text-xl sm:text-2xl font-bold text-bad">{fmt(threeMonth.fees)}</div>
               <div className="mt-2 text-[11px] italic text-muted">{fmtPct(feeRatePct)} avg · service + channel</div>
             </div>
-            <div className="px-6 py-5">
-              <div className="tabular-nums text-2xl font-bold text-accent">{fmt(threeMonth.net)}</div>
+            <div className="px-4 sm:px-6 py-4 sm:py-5">
+              <div className="tabular-nums text-xl sm:text-2xl font-bold text-accent">{fmt(threeMonth.net)}</div>
               <div className="mt-2 text-[11px] italic text-muted">No rent deducted · pure co-host share</div>
             </div>
-            <div className="px-6 py-5">
-              <div className="tabular-nums text-2xl font-bold text-text">{threeMonth.unitCount}</div>
+            <div className="px-4 sm:px-6 py-4 sm:py-5">
+              <div className="tabular-nums text-xl sm:text-2xl font-bold text-text">{threeMonth.unitCount}</div>
               <div className="mt-2 text-[11px] text-muted">
                 units across <span className="font-semibold text-text">{threeMonth.propertyCount}</span> properties
               </div>
@@ -144,7 +144,8 @@ export default function CCPortfolioPage() {
 
         {/* Monthly breakdown table */}
         <div className="overflow-hidden rounded-2xl border border-border bg-panel shadow-soft">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="bg-[#111c35]">
                 <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10 w-36">Month</th>
@@ -182,12 +183,13 @@ export default function CCPortfolioPage() {
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 
       {/* ── Insight banner ── */}
       {topProp && (
-        <div className="relative overflow-hidden rounded-2xl border border-accent/25 bg-gradient-to-br from-accent/10 via-accent/5 to-transparent px-6 py-5">
+        <div className="relative overflow-hidden rounded-2xl border border-accent/25 bg-gradient-to-br from-accent/10 via-accent/5 to-transparent px-4 sm:px-6 py-4 sm:py-5">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/50 to-transparent" />
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>

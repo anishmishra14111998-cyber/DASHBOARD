@@ -74,7 +74,7 @@ export default function GrossMarginPage() {
   const topProp = data.properties[0];
 
   return (
-    <main className="mx-auto max-w-7xl space-y-10 px-6 py-10 animate-fade-in">
+    <main className="mx-auto max-w-7xl space-y-8 sm:space-y-10 px-4 sm:px-6 py-6 sm:py-10 animate-fade-in">
 
       {/* ── Hero ── */}
       <section className="flex flex-wrap items-end justify-between gap-4">
@@ -82,10 +82,10 @@ export default function GrossMarginPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-accent">
             Gross Margin 1
           </p>
-          <h1 className="mt-2 text-display-lg tracking-tight text-text">
+          <h1 className="mt-2 text-2xl sm:text-display-lg tracking-tight text-text">
             Jan – Mar 2026
-            <span className="ml-3 text-display text-muted font-normal">·</span>
-            <span className="ml-3 text-display text-good font-semibold tabular-nums">{threeMonth.marginPct}%</span>
+            <span className="ml-2 sm:ml-3 text-xl sm:text-display text-muted font-normal">·</span>
+            <span className="ml-2 sm:ml-3 text-xl sm:text-display text-good font-semibold tabular-nums">{threeMonth.marginPct}%</span>
           </h1>
           <p className="mt-1.5 text-sm text-muted">
             M Portfolio · {threeMonth.units} units · Gross Revenue − Platform Fees − Period Rent = GM1 ·{" "}
@@ -138,26 +138,26 @@ export default function GrossMarginPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 bg-panel">
             {/* Gross Revenue (Jan–Mar) */}
-            <div className="relative px-6 py-5 border-r border-border">
-              <div className="tabular-nums text-2xl font-bold text-good">{fmt(threeMonth.grossRevenue)}</div>
+            <div className="relative px-4 sm:px-6 py-4 sm:py-5 border-r border-border">
+              <div className="tabular-nums text-xl sm:text-2xl font-bold text-good">{fmt(threeMonth.grossRevenue)}</div>
               <div className="mt-2 text-[11px] italic text-muted">Airbnb + Other · self-managed gross</div>
               <span className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-faint text-base font-light hidden md:block">−</span>
             </div>
             {/* Commission (Jan–Mar) */}
-            <div className="relative px-6 py-5 border-r border-border">
-              <div className="tabular-nums text-2xl font-bold text-bad">{fmt(threeMonth.commission)}</div>
+            <div className="relative px-4 sm:px-6 py-4 sm:py-5 border-r border-border">
+              <div className="tabular-nums text-xl sm:text-2xl font-bold text-bad">{fmt(threeMonth.commission)}</div>
               <div className="mt-2 text-[11px] italic text-muted">Service fees + channel commission</div>
               <span className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-faint text-base font-light hidden md:block">=</span>
             </div>
             {/* Rent Paid (Jan–Mar) */}
-            <div className="relative px-6 py-5 border-r border-border">
-              <div className="tabular-nums text-2xl font-bold text-text">{fmt(threeMonth.rentPaid)}</div>
+            <div className="relative px-4 sm:px-6 py-4 sm:py-5 border-r border-border">
+              <div className="tabular-nums text-xl sm:text-2xl font-bold text-text">{fmt(threeMonth.rentPaid)}</div>
               <div className="mt-2 text-[11px] italic text-muted">Pro-rated rent paid to landlords</div>
               <span className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-faint text-base font-light hidden md:block">=</span>
             </div>
             {/* GM1 (Jan–Mar) */}
-            <div className="px-6 py-5 bg-good/5">
-              <div className="tabular-nums text-2xl font-bold text-good">{fmt(threeMonth.gm1)}</div>
+            <div className="px-4 sm:px-6 py-4 sm:py-5 bg-good/5">
+              <div className="tabular-nums text-xl sm:text-2xl font-bold text-good">{fmt(threeMonth.gm1)}</div>
               <div className="mt-2 text-[11px] text-muted">
                 <span className="font-bold text-good text-sm">{threeMonth.marginPct}%</span>
                 <span className="ml-1">GM1 Margin</span>
@@ -168,11 +168,12 @@ export default function GrossMarginPage() {
 
         {/* Monthly breakdown — Jan / Feb / Mar */}
         <div className="overflow-hidden rounded-2xl border border-border bg-panel shadow-soft">
-          <div className="px-5 py-3 border-b border-border bg-panel2/40 flex items-center gap-3">
+          <div className="px-4 sm:px-5 py-3 border-b border-border bg-panel2/40 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">Monthly Breakdown · Jan – Mar 2026</span>
             <span className="text-[10px] text-faint italic">Net Revenue = Gross after commission · Rent Paid derived from sheet</span>
           </div>
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="bg-[#111c35]">
                 <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10 w-36">Month</th>
@@ -211,6 +212,7 @@ export default function GrossMarginPage() {
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 
@@ -244,7 +246,7 @@ export default function GrossMarginPage() {
 
       {/* ── Insight banner ── */}
       {marVsJan > 0 && (
-        <div className="relative overflow-hidden rounded-2xl border border-good/25 bg-gradient-to-br from-good/10 via-good/5 to-transparent px-6 py-5">
+        <div className="relative overflow-hidden rounded-2xl border border-good/25 bg-gradient-to-br from-good/10 via-good/5 to-transparent px-4 sm:px-6 py-4 sm:py-5">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-good/50 to-transparent" />
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>

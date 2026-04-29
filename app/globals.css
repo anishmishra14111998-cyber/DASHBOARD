@@ -47,6 +47,10 @@ table,
   background: transparent;
 }
 
+/* Hide scrollbar utility for horizontal-scrolling tab strips etc. */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Selection */
 ::selection {
   background: rgba(107, 142, 255, 0.35);
