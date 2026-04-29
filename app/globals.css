@@ -2,13 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* ── Theme tokens ───────────────────────────────────────────────
+   Format is space-separated R G B so Tailwind's `<alpha-value>`
+   pattern works (rgb(var(--bg) / 0.5) etc.).
+*/
+:root, [data-theme="dark"] {
+  --bg:           8 9 13;
+  --panel:        15 17 23;
+  --panel2:       23 26 35;
+  --panel3:       31 35 49;
+  --border:       34 38 51;
+  --border-strong: 54 60 80;
+  --text:         238 240 246;
+  --muted:        141 150 170;
+  --faint:        91 99 120;
+  --accent:       107 142 255;
+  --accent2:      143 166 255;
+  --accent-soft:  19 25 58;
+  --good:         34 197 94;
+  --good-soft:    15 42 28;
+  --bad:          244 63 94;
+  --bad-soft:     58 22 35;
+  --warn:         245 158 11;
+
+  --body-glow: rgba(107, 142, 255, 0.12);
+  --scrollbar-thumb: #2a2f3f;
+  --scrollbar-thumb-hover: #3a4154;
+  --scrollbar-track: transparent;
+  --skeleton-from: #15181f;
+  --skeleton-to:   #1d212c;
   color-scheme: dark;
 }
 
+[data-theme="light"] {
+  --bg:           248 250 252;
+  --panel:        255 255 255;
+  --panel2:       241 245 249;
+  --panel3:       226 232 240;
+  --border:       226 232 240;
+  --border-strong: 203 213 225;
+  --text:         15 23 42;
+  --muted:        100 116 139;
+  --faint:        148 163 184;
+  --accent:       79 102 255;
+  --accent2:      99 124 255;
+  --accent-soft:  238 242 255;
+  --good:         22 163 74;
+  --good-soft:    220 252 231;
+  --bad:          220 38 38;
+  --bad-soft:     254 226 226;
+  --warn:         217 119 6;
+
+  --body-glow: rgba(79, 102, 255, 0.10);
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
+  --scrollbar-track: transparent;
+  --skeleton-from: #f1f5f9;
+  --skeleton-to:   #e2e8f0;
+  color-scheme: light;
+}
+
 html, body {
-  background: #08090d;
-  color: #eef0f6;
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
   font-family:
     ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter",
     "Segoe UI", Roboto, sans-serif;
@@ -16,11 +72,12 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.005em;
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
 body {
   background-image:
-    radial-gradient(ellipse 60rem 30rem at 50% -10rem, rgba(107, 142, 255, 0.12), transparent 70%);
+    radial-gradient(ellipse 60rem 30rem at 50% -10rem, var(--body-glow), transparent 70%);
   background-attachment: fixed;
 }
 
@@ -36,15 +93,15 @@ table,
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2a2f3f;
+  background: var(--scrollbar-thumb);
   border-radius: 8px;
-  border: 2px solid #08090d;
+  border: 2px solid rgb(var(--bg));
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a4154;
+  background: var(--scrollbar-thumb-hover);
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--scrollbar-track);
 }
 
 /* Hide scrollbar utility for horizontal-scrolling tab strips etc. */
@@ -53,20 +110,24 @@ table,
 
 /* Selection */
 ::selection {
-  background: rgba(107, 142, 255, 0.35);
-  color: #ffffff;
+  background: rgb(var(--accent) / 0.35);
+  color: rgb(var(--text));
 }
 
 /* Focus ring polish */
 :focus-visible {
-  outline: 2px solid rgba(107, 142, 255, 0.55);
+  outline: 2px solid rgb(var(--accent) / 0.55);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
 /* Date input dark-mode polish */
-input[type="date"]::-webkit-calendar-picker-indicator {
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1) opacity(0.55);
+  cursor: pointer;
+}
+[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.55;
   cursor: pointer;
 }
 
@@ -84,7 +145,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   100% { background-position: 400px 0; }
 }
 .skeleton {
-  background: linear-gradient(90deg, #15181f 0%, #1d212c 50%, #15181f 100%);
+  background: linear-gradient(90deg, var(--skeleton-from) 0%, var(--skeleton-to) 50%, var(--skeleton-from) 100%);
   background-size: 800px 100%;
   animation: shimmer 1.6s linear infinite;
   border-radius: 8px;

@@ -1,36 +1,38 @@
 import type { Config } from "tailwindcss";
 
+const v = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        // Surfaces — slightly cooler, more depth
-        bg:        "#08090d",
-        panel:     "#0f1117",
-        panel2:    "#171a23",
-        panel3:    "#1f2331",
+        // Surfaces — driven by CSS vars, see globals.css
+        bg:        v("bg"),
+        panel:     v("panel"),
+        panel2:    v("panel2"),
+        panel3:    v("panel3"),
 
-        // Borders — subtle by default, strong for emphasis
-        border:        "#222633",
-        borderStrong:  "#363c50",
+        // Borders
+        border:        v("border"),
+        borderStrong:  v("border-strong"),
 
         // Text scale
-        text:    "#eef0f6",
-        muted:   "#8d96aa",
-        faint:   "#5b6378",
+        text:    v("text"),
+        muted:   v("muted"),
+        faint:   v("faint"),
 
         // Brand accent
-        accent:     "#6b8eff",
-        accent2:    "#8fa6ff",
-        accentSoft: "#13193a",
+        accent:     v("accent"),
+        accent2:    v("accent2"),
+        accentSoft: v("accent-soft"),
 
         // Semantic
-        good:    "#22c55e",
-        goodSoft: "#0f2a1c",
-        bad:     "#f43f5e",
-        badSoft: "#3a1623",
-        warn:    "#f59e0b",
+        good:    v("good"),
+        goodSoft: v("good-soft"),
+        bad:     v("bad"),
+        badSoft: v("bad-soft"),
+        warn:    v("warn"),
       },
       fontFamily: {
         sans: [
@@ -52,7 +54,6 @@ const config: Config = {
         ],
       },
       fontSize: {
-        // tighter, more confident scale
         "display-xl": ["3.25rem", { lineHeight: "1.05", letterSpacing: "-0.02em" }],
         "display-lg": ["2.25rem", { lineHeight: "1.1",  letterSpacing: "-0.02em" }],
         "display":    ["1.75rem", { lineHeight: "1.15", letterSpacing: "-0.015em" }],
