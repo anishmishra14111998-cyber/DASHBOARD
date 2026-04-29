@@ -117,10 +117,10 @@ export default function GrossMarginPage() {
           <span>Rent Paid</span>
           <span className="text-faint">=</span>
           <span className="font-semibold text-good">Gross Margin 1</span>
-          <span className="ml-auto text-faint italic">Period: Jan–Apr 23 2026</span>
+          <span className="ml-auto text-faint italic">Period: Jan – Mar 2026</span>
         </div>
 
-        {/* 4-column KPI strip */}
+        {/* 4-column KPI strip — Jan–Mar only */}
         <div className="overflow-hidden rounded-2xl border border-border shadow-soft">
           <div className="grid grid-cols-2 md:grid-cols-4 bg-[#111c35]">
             <div className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10">
@@ -137,29 +137,29 @@ export default function GrossMarginPage() {
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 bg-panel">
-            {/* Gross Revenue */}
+            {/* Gross Revenue (Jan–Mar) */}
             <div className="relative px-6 py-5 border-r border-border">
-              <div className="tabular-nums text-2xl font-bold text-good">{fmt(portfolio.grossRevenue)}</div>
+              <div className="tabular-nums text-2xl font-bold text-good">{fmt(threeMonth.grossRevenue)}</div>
               <div className="mt-2 text-[11px] italic text-muted">Airbnb + Other · self-managed gross</div>
               <span className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-faint text-base font-light hidden md:block">−</span>
             </div>
-            {/* Commission */}
+            {/* Commission (Jan–Mar) */}
             <div className="relative px-6 py-5 border-r border-border">
-              <div className="tabular-nums text-2xl font-bold text-bad">{fmt(portfolio.platformFees)}</div>
+              <div className="tabular-nums text-2xl font-bold text-bad">{fmt(threeMonth.commission)}</div>
               <div className="mt-2 text-[11px] italic text-muted">Service fees + channel commission</div>
               <span className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-faint text-base font-light hidden md:block">=</span>
             </div>
-            {/* Rent Paid */}
+            {/* Rent Paid (Jan–Mar) */}
             <div className="relative px-6 py-5 border-r border-border">
-              <div className="tabular-nums text-2xl font-bold text-text">{fmt(portfolio.periodRent)}</div>
+              <div className="tabular-nums text-2xl font-bold text-text">{fmt(threeMonth.rentPaid)}</div>
               <div className="mt-2 text-[11px] italic text-muted">Pro-rated rent paid to landlords</div>
               <span className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-faint text-base font-light hidden md:block">=</span>
             </div>
-            {/* GM1 */}
+            {/* GM1 (Jan–Mar) */}
             <div className="px-6 py-5 bg-good/5">
-              <div className="tabular-nums text-2xl font-bold text-good">{fmt(portfolio.gm1)}</div>
+              <div className="tabular-nums text-2xl font-bold text-good">{fmt(threeMonth.gm1)}</div>
               <div className="mt-2 text-[11px] text-muted">
-                <span className="font-bold text-good text-sm">{portfolio.marginPct}%</span>
+                <span className="font-bold text-good text-sm">{threeMonth.marginPct}%</span>
                 <span className="ml-1">GM1 Margin</span>
               </div>
             </div>

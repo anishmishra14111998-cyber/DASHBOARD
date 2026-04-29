@@ -73,7 +73,10 @@ export interface GrossMarginData {
   generatedAt: string;
   portfolio: PortfolioSummary;
   threeMonth: {
+    grossRevenue: number;
+    commission: number;
     netRevenue: number;
+    rentPaid: number;
     gm1: number;
     marginPct: number;
     units: number;
@@ -148,6 +151,14 @@ export async function fetchGrossMarginData(): Promise<GrossMarginData> {
   const pGm1     = money(portfolioValueRow[9] ?? "");
   const pMargin  = pGross ? Math.round((pGm1 / (pGross + pFees)) * 1000) / 10 : 0;
 
+  // Derive Jan–Mar gross revenue + commission proportionally:
+  // sheet only has full-period (Jan–Apr) splits, so allocate by Jan–Mar's share of net revenue.
+  const fullPeriodNet = pGross + pFees; // pFees is negative
+  const janMarShare   = fullPeriodNet > 0 ? threeMonthNet / fullPeriodNet : 0;
+  const threeMonthGross      = Math.round(pGross * janMarShare);
+  const threeMonthCommission = Math.round(pFees  * janMarShare);
+  const threeMonthRent       = threeMonthNet - threeMonthGm1;
+
   return {
     generatedAt: new Date().toISOString(),
     portfolio: {
@@ -158,7 +169,11 @@ export async function fetchGrossMarginData(): Promise<GrossMarginData> {
       marginPct: pMargin,
     },
     threeMonth: {
-      netRevenue: threeMonthNet, gm1: threeMonthGm1,
+      grossRevenue: threeMonthGross,
+      commission: threeMonthCommission,
+      netRevenue: threeMonthNet,
+      rentPaid: threeMonthRent,
+      gm1: threeMonthGm1,
       marginPct: threeMonthNet ? Math.round((threeMonthGm1 / threeMonthNet) * 1000) / 10 : 0,
       units: totalUnits,
     },
