@@ -103,58 +103,83 @@ export default function GrossMarginPage() {
         </button>
       </section>
 
-      {/* ── Portfolio Summary Header (Jan–Mar only) ── */}
+      {/* ── Portfolio Summary — Gross → Commission → Rent → GM1 ── */}
       <section className="space-y-4">
+
+        {/* Flow formula bar */}
+        <div className="flex items-center gap-2 px-1 text-[11px] text-muted flex-wrap">
+          <span className="font-semibold text-text">Gross Revenue</span>
+          <span className="text-faint">−</span>
+          <span>Commission</span>
+          <span className="text-faint">=</span>
+          <span>Net Revenue</span>
+          <span className="text-faint">−</span>
+          <span>Rent Paid</span>
+          <span className="text-faint">=</span>
+          <span className="font-semibold text-good">Gross Margin 1</span>
+          <span className="ml-auto text-faint italic">Period: Jan–Apr 23 2026</span>
+        </div>
+
         {/* 4-column KPI strip */}
         <div className="overflow-hidden rounded-2xl border border-border shadow-soft">
           <div className="grid grid-cols-2 md:grid-cols-4 bg-[#111c35]">
-            {[
-              { label: "M NET REVENUE",    cls: "border-r border-white/10" },
-              { label: "M PLATFORM FEES",  cls: "border-r border-white/10" },
-              { label: "M PERIOD RENT",    cls: "border-r border-white/10" },
-              { label: "M GROSS MARGIN 1", cls: "bg-[#1a4d3b]" },
-            ].map(({ label, cls }) => (
-              <div key={label} className={`px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70 ${cls}`}>
-                {label}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 bg-panel divide-x divide-border">
-            {/* Net Revenue = sum of monthly net revenues (Jan–Mar) */}
-            <div className="px-6 py-5">
-              <div className="tabular-nums text-2xl font-bold text-good">{fmt(threeMonth.netRevenue)}</div>
-              <div className="mt-2 text-[11px] italic text-muted">Airbnb + Other gross (Jan–Mar)</div>
+            <div className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10">
+              Gross Revenue
             </div>
-            {/* Platform Fees: full-period figure from sheet — monthly split not available */}
-            <div className="px-6 py-5">
+            <div className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10">
+              Commission
+            </div>
+            <div className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10">
+              Rent Paid
+            </div>
+            <div className="px-6 py-3.5 text-[11px] font-bold uppercase tracking-[0.16em] text-white/70 bg-[#1a4d3b]">
+              Gross Margin 1
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 bg-panel">
+            {/* Gross Revenue */}
+            <div className="relative px-6 py-5 border-r border-border">
+              <div className="tabular-nums text-2xl font-bold text-good">{fmt(portfolio.grossRevenue)}</div>
+              <div className="mt-2 text-[11px] italic text-muted">Airbnb + Other · self-managed gross</div>
+              <span className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-faint text-base font-light hidden md:block">−</span>
+            </div>
+            {/* Commission */}
+            <div className="relative px-6 py-5 border-r border-border">
               <div className="tabular-nums text-2xl font-bold text-bad">{fmt(portfolio.platformFees)}</div>
               <div className="mt-2 text-[11px] italic text-muted">Service fees + channel commission</div>
+              <span className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-faint text-base font-light hidden md:block">=</span>
             </div>
-            {/* Period Rent = Net Revenue − GM1, Jan–Mar */}
-            <div className="px-6 py-5">
-              <div className="tabular-nums text-2xl font-bold text-text">{fmt(threeMonth.netRevenue - threeMonth.gm1)}</div>
-              <div className="mt-2 text-[11px] italic text-muted">Pro-rated by month with revenue</div>
+            {/* Rent Paid */}
+            <div className="relative px-6 py-5 border-r border-border">
+              <div className="tabular-nums text-2xl font-bold text-text">{fmt(portfolio.periodRent)}</div>
+              <div className="mt-2 text-[11px] italic text-muted">Pro-rated rent paid to landlords</div>
+              <span className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-faint text-base font-light hidden md:block">=</span>
             </div>
-            {/* GM1 and margin, Jan–Mar */}
-            <div className="px-6 py-5">
-              <div className="tabular-nums text-2xl font-bold text-good">{fmt(threeMonth.gm1)}</div>
+            {/* GM1 */}
+            <div className="px-6 py-5 bg-good/5">
+              <div className="tabular-nums text-2xl font-bold text-good">{fmt(portfolio.gm1)}</div>
               <div className="mt-2 text-[11px] text-muted">
-                <span className="font-bold text-good">{threeMonth.marginPct}%</span> GM1 Margin
+                <span className="font-bold text-good text-sm">{portfolio.marginPct}%</span>
+                <span className="ml-1">GM1 Margin</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Monthly breakdown table */}
+        {/* Monthly breakdown — Jan / Feb / Mar */}
         <div className="overflow-hidden rounded-2xl border border-border bg-panel shadow-soft">
+          <div className="px-5 py-3 border-b border-border bg-panel2/40 flex items-center gap-3">
+            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">Monthly Breakdown · Jan – Mar 2026</span>
+            <span className="text-[10px] text-faint italic">Net Revenue = Gross after commission · Rent Paid derived from sheet</span>
+          </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[#111c35]">
                 <th className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10 w-36">Month</th>
                 <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10">Net Revenue</th>
-                <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10">Period Rent</th>
-                <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10">GM1</th>
-                <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.16em] text-white/70">Margin %</th>
+                <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10">Rent Paid</th>
+                <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 border-r border-white/10">Gross Margin 1</th>
+                <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.16em] text-white/70">GM1 Margin</th>
               </tr>
             </thead>
             <tbody>
@@ -165,8 +190,10 @@ export default function GrossMarginPage() {
                 return (
                   <tr key={m.month} className={`${i < 2 ? "border-b border-border/50" : ""} ${isBreakout ? "bg-good/5" : "hover:bg-panel2/30"} transition-colors`}>
                     <td className="px-5 py-3.5 font-semibold text-text border-r border-border/40">
-                      {m.month}
-                      {isBreakout && <span className="ml-2 text-[9px] font-bold uppercase tracking-wider text-good">Best</span>}
+                      <div className="flex items-center gap-2">
+                        {m.month}
+                        {isBreakout && <span className="text-[9px] font-bold uppercase tracking-wider text-good border border-good/30 rounded-full px-1.5 py-0.5">Best</span>}
+                      </div>
                     </td>
                     <td className="px-5 py-3.5 text-right tabular-nums text-text border-r border-border/40">{fmt(m.netRevenue)}</td>
                     <td className="px-5 py-3.5 text-right tabular-nums text-muted border-r border-border/40">{fmt(rent)}</td>
@@ -175,8 +202,8 @@ export default function GrossMarginPage() {
                   </tr>
                 );
               })}
-              <tr className="border-t-2 border-border bg-panel2/60 font-semibold text-sm">
-                <td className="px-5 py-3.5 text-text border-r border-border/40">3-Month Total</td>
+              <tr className="border-t-2 border-border bg-panel2/60 font-semibold">
+                <td className="px-5 py-3.5 text-text border-r border-border/40">Jan–Mar Total</td>
                 <td className="px-5 py-3.5 text-right tabular-nums text-text border-r border-border/40">{fmt(threeMonth.netRevenue)}</td>
                 <td className="px-5 py-3.5 text-right tabular-nums text-muted border-r border-border/40">{fmt(threeMonth.netRevenue - threeMonth.gm1)}</td>
                 <td className="px-5 py-3.5 text-right tabular-nums text-good border-r border-border/40">{fmt(threeMonth.gm1)}</td>
