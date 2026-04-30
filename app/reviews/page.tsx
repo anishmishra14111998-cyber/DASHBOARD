@@ -347,7 +347,7 @@ export default function ReviewsPage() {
             <CoverageStat
               label="Total Checkouts"
               value={coverageStats.total.toLocaleString()}
-              tone="default"
+              tone="accent"
             />
             <CoverageStat
               label="Reviews Received"
@@ -575,10 +575,10 @@ function CoverageStat({
   label: string;
   value: string;
   sub?: string;
-  tone: "default" | "good" | "warn";
+  tone: "default" | "good" | "warn" | "accent";
 }) {
-  const valCls  = tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : "text-text";
-  const accent  = tone === "good" ? "bg-good"   : tone === "warn" ? "bg-warn"   : "bg-borderStrong";
+  const valCls  = tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : tone === "accent" ? "text-accent" : "text-text";
+  const accent  = tone === "good" ? "bg-good"   : tone === "warn" ? "bg-warn"   : tone === "accent" ? "bg-accent"   : "bg-borderStrong";
   return (
     <div className="relative overflow-hidden rounded-xl border border-border bg-panel2/40 p-3 sm:p-4">
       <div className={`absolute inset-x-0 top-0 h-px opacity-60 ${accent}`} />
