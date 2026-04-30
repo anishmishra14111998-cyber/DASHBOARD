@@ -149,6 +149,22 @@ export default function ReviewsPage() {
     [inRange]
   );
 
+  // Checkout coverage: completed stays in the date range and what % left a review.
+  const coverageStats = useMemo(() => {
+    if (!coverage) return { total: 0, withReview: 0, awaiting: 0, pct: 0 };
+    const inRangeBookings = coverage.bookings.filter(
+      b => b.checkOut >= range.start && b.checkOut <= range.end
+    );
+    const total      = inRangeBookings.length;
+    const withReview = inRangeBookings.filter(b => b.hasReview).length;
+    return {
+      total,
+      withReview,
+      awaiting: total - withReview,
+      pct: total ? Math.round((withReview / total) * 1000) / 10 : 0,
+    };
+  }, [coverage, range]);
+
   const filtered = useMemo(() => {
     return inRange.filter((r) => {
       if (channel !== "all" && r.channel !== channel) return false;
@@ -314,6 +330,64 @@ export default function ReviewsPage() {
           </p>
         )}
       </div>
+
+      {/* Checkout coverage — total checkouts vs reviews received */}
+      {coverage && (
+        <section className="rounded-2xl border border-border bg-panel p-5 sm:p-6 shadow-soft">
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+              Checkout Coverage · {range.label}
+            </h2>
+            <span className="text-[11px] text-faint">
+              Confirmed stays that have already checked out · {range.start} → {range.end}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+            <CoverageStat
+              label="Total Checkouts"
+              value={coverageStats.total.toLocaleString()}
+              tone="default"
+            />
+            <CoverageStat
+              label="Reviews Received"
+              value={coverageStats.withReview.toLocaleString()}
+              sub={`${coverageStats.pct}% coverage`}
+              tone="good"
+            />
+            <CoverageStat
+              label="Awaiting Review"
+              value={coverageStats.awaiting.toLocaleString()}
+              sub={coverageStats.total ? `${(100 - coverageStats.pct).toFixed(1)}% open` : ""}
+              tone={coverageStats.awaiting > 0 ? "warn" : "good"}
+            />
+          </div>
+
+          {/* Progress bar */}
+          {coverageStats.total > 0 && (
+            <div className="mt-5">
+              <div className="mb-1.5 flex justify-between text-[10px] uppercase tracking-wider">
+                <span className="text-faint">Coverage rate</span>
+                <span className={`tabular-nums font-bold ${
+                  coverageStats.pct >= 80 ? "text-good" :
+                  coverageStats.pct >= 50 ? "text-warn" : "text-bad"
+                }`}>
+                  {coverageStats.withReview} / {coverageStats.total} · {coverageStats.pct}%
+                </span>
+              </div>
+              <div className="h-3 w-full overflow-hidden rounded-full bg-panel3">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${
+                    coverageStats.pct >= 80 ? "bg-good" :
+                    coverageStats.pct >= 50 ? "bg-warn" : "bg-bad"
+                  }`}
+                  style={{ width: `${coverageStats.pct}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Review CRM */}
       {coverage && (
@@ -491,6 +565,26 @@ function Segmented({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function CoverageStat({
+  label, value, sub, tone,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone: "default" | "good" | "warn";
+}) {
+  const valCls  = tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : "text-text";
+  const accent  = tone === "good" ? "bg-good"   : tone === "warn" ? "bg-warn"   : "bg-borderStrong";
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-border bg-panel2/40 p-3 sm:p-4">
+      <div className={`absolute inset-x-0 top-0 h-px opacity-60 ${accent}`} />
+      <div className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">{label}</div>
+      <div className={`mt-1.5 text-xl sm:text-2xl tabular-nums font-bold ${valCls}`}>{value}</div>
+      {sub && <div className="mt-1 text-[10px] sm:text-[11px] text-muted">{sub}</div>}
     </div>
   );
 }
