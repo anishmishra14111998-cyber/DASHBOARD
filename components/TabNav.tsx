@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const TABS = [
-  { href: "/",             full: "Revenue Dashboard",    short: "Revenue" },
-  { href: "/cleaning",     full: "Cleaning Dashboard",   short: "Cleaning" },
-  { href: "/reviews",      full: "Reviews",              short: "Reviews" },
-  { href: "/gross-margin", full: "Gross Margin",         short: "Margin" },
-  { href: "/cc-portfolio", full: "CC Portfolio Monthly", short: "CC Portfolio" },
+  { href: "/",              full: "Revenue Dashboard",            short: "Revenue" },
+  { href: "/co-hosting",    full: "Co-Hosting Portfolio Revenue", short: "Co-Hosting" },
+  { href: "/cleaning",      full: "Cleaning Dashboard",           short: "Cleaning" },
+  { href: "/reviews",       full: "Reviews",                      short: "Reviews" },
+  { href: "/gross-margin",  full: "Gross Margin",                 short: "Margin" },
+  { href: "/cc-portfolio",  full: "CC Portfolio Monthly",         short: "CC Portfolio" },
 ];
 
 export function TabNav() {
