@@ -8,6 +8,7 @@ const TABS = [
   { href: "/co-hosting",    full: "Co-Hosting Portfolio Revenue", short: "Co-Hosting" },
   { href: "/cleaning",      full: "Cleaning Dashboard",           short: "Cleaning" },
   { href: "/reviews",       full: "Reviews",                      short: "Reviews" },
+  { href: "/checkouts",     full: "Checkouts",                    short: "Checkouts" },
   { href: "/gross-margin",  full: "Gross Margin",                 short: "Margin" },
   { href: "/cc-portfolio",  full: "CC Portfolio Monthly",         short: "CC Portfolio" },
 ];
