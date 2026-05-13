@@ -52,10 +52,23 @@ export async function updateCrmEntry(
   const notes = [...existing.notes];
   if (newNote?.trim()) notes.push({ text: newNote.trim(), createdAt: now });
 
-  const contactedAt = patch.noReviewStatus === "contacted" && !existing.contactedAt
-    ? now : existing.contactedAt;
-  const receivedAt  = patch.noReviewStatus === "received"  && !existing.receivedAt
-    ? now : existing.receivedAt;
+  // Reverse transitions clear stale timestamps so the displayed history matches
+  // the card's current bucket. Forward transitions stamp once (preserved on
+  // re-entry from the bucket beyond).
+  let contactedAt = existing.contactedAt;
+  let receivedAt  = existing.receivedAt;
+  if (patch.noReviewStatus !== undefined) {
+    if (patch.noReviewStatus === "pending") {
+      contactedAt = undefined;
+      receivedAt  = undefined;
+    } else if (patch.noReviewStatus === "contacted") {
+      contactedAt = existing.contactedAt ?? now;
+      receivedAt  = undefined;
+    } else { // received
+      contactedAt = existing.contactedAt ?? now;
+      receivedAt  = existing.receivedAt  ?? now;
+    }
+  }
   const subStarActedAt = patch.subStarStatus && patch.subStarStatus !== "pending" && patch.subStarStatus !== "resolved" && !existing.subStarActedAt
     ? now : existing.subStarActedAt;
 

@@ -170,3 +170,6 @@ table,
 .btn-warn {
   @apply border border-warn/30 bg-warn/10 text-warn hover:bg-warn/20;
 }
+.btn-muted {
+  @apply border border-border bg-panel2/60 text-muted hover:border-borderStrong hover:text-text;
+}

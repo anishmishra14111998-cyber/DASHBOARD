@@ -41,8 +41,22 @@ export function ReviewCrm({ bookings, initialCrm }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [noteInput, setNoteInput] = useState<Record<string, string>>({});
 
-  const noReview  = useMemo(() => bookings.filter(b => !b.hasReview), [bookings]);
-  const subStar   = useMemo(() => bookings.filter(b => b.hasReview && b.reviewRating !== null && b.reviewRating < 5), [bookings]);
+  // The kanban tracks the full outreach funnel: every booking without a
+  // review (active queue) PLUS bookings whose review came in while they were
+  // being tracked (so the operator can see their work pay off in "Received").
+  const noReview = useMemo(
+    () => bookings.filter(b => !b.hasReview || crm[b.id] !== undefined),
+    [bookings, crm],
+  );
+  const subStar  = useMemo(() => bookings.filter(b => b.hasReview && b.reviewRating !== null && b.reviewRating < 5), [bookings]);
+
+  // hasReview always wins — a real guest review trumps any manual status,
+  // so cards auto-promote out of "Pending"/"Contacted" the moment the
+  // review lands in Guesty.
+  function effStatus(b: CoverageBooking): NoReviewStatus {
+    if (b.hasReview) return "received";
+    return crm[b.id]?.noReviewStatus ?? "pending";
+  }
 
   function getEntry(id: string): CrmEntry {
     return crm[id] ?? { bookingId: id, noReviewStatus: "pending", notes: [], updatedAt: "" };
@@ -77,9 +91,9 @@ export function ReviewCrm({ bookings, initialCrm }: Props) {
   }
 
   // ---- Kanban buckets for no-review ----
-  const noPending   = noReview.filter(b => (crm[b.id]?.noReviewStatus ?? "pending") === "pending");
-  const noContacted = noReview.filter(b => crm[b.id]?.noReviewStatus === "contacted");
-  const noReceived  = noReview.filter(b => crm[b.id]?.noReviewStatus === "received");
+  const noPending   = noReview.filter(b => effStatus(b) === "pending");
+  const noContacted = noReview.filter(b => effStatus(b) === "contacted");
+  const noReceived  = noReview.filter(b => effStatus(b) === "received");
 
   // ---- Kanban buckets for sub-star ----
   const ssPending    = subStar.filter(b => !crm[b.id]?.subStarStatus || crm[b.id].subStarStatus === "pending");
@@ -87,8 +101,9 @@ export function ReviewCrm({ bookings, initialCrm }: Props) {
   const ssResolved   = subStar.filter(b => crm[b.id]?.subStarStatus === "resolved");
 
   // ---- KPIs ----
-  const totalNo  = noReview.length;
-  const covPct   = bookings.length ? Math.round((bookings.filter(b => b.hasReview).length / bookings.length) * 100) : 0;
+  const totalNo    = noReview.length;
+  const awaitingNo = bookings.filter(b => !b.hasReview).length;
+  const covPct     = bookings.length ? Math.round((bookings.filter(b => b.hasReview).length / bookings.length) * 100) : 0;
 
   return (
     <div className="space-y-12">
@@ -102,7 +117,7 @@ export function ReviewCrm({ bookings, initialCrm }: Props) {
           Track outreach for missing reviews and manage sub-5-star recovery
         </p>
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Kpi label="Awaiting review" value={String(totalNo)} tone="default" />
+          <Kpi label="Awaiting review" value={String(awaitingNo)} tone="default" />
           <Kpi label="Contacted"       value={String(noContacted.length)} tone="accent" />
           <Kpi label="Received"        value={String(noReceived.length)}  tone="good"   />
           <Kpi label="Sub-5★ to fix"   value={String(subStar.length)}     tone={subStar.length > 0 ? "bad" : "default"} />
@@ -115,7 +130,7 @@ export function ReviewCrm({ bookings, initialCrm }: Props) {
           <h3 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
             Awaiting Review
           </h3>
-          <span className="text-[11px] text-faint">{totalNo} bookings · no guest review yet</span>
+          <span className="text-[11px] text-faint">{totalNo} bookings in outreach pipeline</span>
         </div>
 
         {totalNo === 0 ? (
@@ -159,13 +174,22 @@ export function ReviewCrm({ bookings, initialCrm }: Props) {
               onNoteChange={(id, v) => setNoteInput(p => ({ ...p, [id]: v }))}
               onSaveNote={(id) => patch(id, {}, noteInput[id])}
               renderAction={(b) => (
-                <button
-                  onClick={() => patch(b.id, { noReviewStatus: "received" as NoReviewStatus })}
-                  disabled={saving[b.id]}
-                  className="btn-action btn-good"
-                >
-                  ✓ Mark Received
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => patch(b.id, { noReviewStatus: "pending" as NoReviewStatus })}
+                    disabled={saving[b.id]}
+                    className="btn-action btn-muted flex-1"
+                  >
+                    ← Pending
+                  </button>
+                  <button
+                    onClick={() => patch(b.id, { noReviewStatus: "received" as NoReviewStatus })}
+                    disabled={saving[b.id]}
+                    className="btn-action btn-good flex-1"
+                  >
+                    ✓ Received
+                  </button>
+                </div>
               )}
             />
             <KanbanCol
@@ -180,7 +204,19 @@ export function ReviewCrm({ bookings, initialCrm }: Props) {
               onToggle={toggle}
               onNoteChange={(id, v) => setNoteInput(p => ({ ...p, [id]: v }))}
               onSaveNote={(id) => patch(id, {}, noteInput[id])}
-              renderAction={null}
+              renderAction={(b) => b.hasReview ? (
+                <div className="text-center text-[10px] uppercase tracking-wider text-good">
+                  ✓ Auto-received · guest left a review
+                </div>
+              ) : (
+                <button
+                  onClick={() => patch(b.id, { noReviewStatus: "contacted" as NoReviewStatus })}
+                  disabled={saving[b.id]}
+                  className="btn-action btn-muted w-full"
+                >
+                  ← Back to Contacted
+                </button>
+              )}
             />
           </div>
         )}
