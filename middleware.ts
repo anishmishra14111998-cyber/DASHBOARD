@@ -35,5 +35,7 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // /api/cron/* is carved out: Vercel's cron runner can't satisfy basic auth,
+  // so those routes verify a CRON_SECRET bearer token internally instead.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/cron).*)"],
 };
