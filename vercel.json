@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/founder-slack",
-      "schedule": "15 21 * * *"
+      "schedule": "25 21 * * *"
     }
   ]
 }
