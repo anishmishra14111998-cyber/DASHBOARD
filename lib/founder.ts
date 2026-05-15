@@ -38,6 +38,14 @@ export interface OccupancyBlock {
   occupancyPct: number;             // one decimal
 }
 
+export interface TodayOccupancyBlock {
+  date: string;
+  totalProperties: number;
+  occupied: number;
+  vacant: number;
+  occupancyPct: number;             // integer
+}
+
 export interface ReviewBlock {
   windowStart: string;
   windowEnd: string;
@@ -51,6 +59,7 @@ export interface ReviewBlock {
 export interface FounderSnapshot {
   generatedAt: string;
   pickup: PickupBlock;
+  todayOccupancy: TodayOccupancyBlock;
   occupancy: OccupancyBlock;
   reviews: ReviewBlock;
 }
@@ -101,23 +110,31 @@ export async function buildFounderSnapshot(): Promise<FounderSnapshot> {
     Math.abs(variance) < deadband ? "on-track" : variance > 0 ? "ahead" : "behind";
   const pctOfTarget = (mtdRevenue / MONTHLY_REVENUE_TARGET) * 100;
 
-  // ---- 2. Forward 30-day occupancy ----
+  // ---- 2. Forward 30-day occupancy + today's occupancy ----
   const forwardStart          = today;
   const forwardEnd            = addDaysIso(today, 29);
   const forwardEndExclusive   = addDaysIso(forwardEnd, 1);
   let   occupiedNights        = 0;
+  const occupiedTodaySet      = new Set<string>();
 
   for (const r of guesty.reservations) {
     if (r.status !== "confirmed") continue;
+    // Forward 30 days
     const inStart = r.checkIn  > forwardStart        ? r.checkIn  : forwardStart;
     const inEnd   = r.checkOut < forwardEndExclusive ? r.checkOut : forwardEndExclusive;
     if (inStart < inEnd) occupiedNights += daysBetweenIso(inStart, inEnd);
+    // Today (half-open interval: checkIn ≤ today < checkOut)
+    if (r.checkIn <= today && today < r.checkOut) occupiedTodaySet.add(r.propertyId);
   }
 
   const totalProperties      = guesty.properties.length;
   const totalNightsAvailable = totalProperties * 30;
   const occupancyPct = totalNightsAvailable > 0
     ? Math.round((occupiedNights / totalNightsAvailable) * 1000) / 10
+    : 0;
+  const occupiedToday    = occupiedTodaySet.size;
+  const todayPct = totalProperties > 0
+    ? Math.round((occupiedToday / totalProperties) * 100)
     : 0;
 
   // ---- 3. Trailing 30-day review score (+ prior 30 days for trend) ----
@@ -159,6 +176,13 @@ export async function buildFounderSnapshot(): Promise<FounderSnapshot> {
       variance:          Math.round(variance),
       paceStatus,
       pctOfTarget:       Math.round(pctOfTarget * 10) / 10,
+    },
+    todayOccupancy: {
+      date:        today,
+      totalProperties,
+      occupied:    occupiedToday,
+      vacant:      Math.max(0, totalProperties - occupiedToday),
+      occupancyPct: todayPct,
     },
     occupancy: {
       start: forwardStart,

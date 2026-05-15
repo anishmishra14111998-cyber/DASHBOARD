@@ -8,10 +8,6 @@ const fmtMoney = (n: number) =>
   `$${Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 const fmtMoneyK = (n: number) =>
   n >= 10_000 ? `$${(n / 1000).toFixed(n >= 100_000 ? 0 : 1)}K` : fmtMoney(n);
-const fmtDate = (iso: string) =>
-  new Date(`${iso}T12:00:00Z`).toLocaleDateString(undefined, {
-    month: "short", day: "numeric", timeZone: "UTC",
-  });
 
 export default function FounderUpdatePage() {
   const [data, setData] = useState<FounderSnapshot | null>(null);
@@ -40,7 +36,7 @@ export default function FounderUpdatePage() {
 
   if (error) {
     return (
-      <main className="mx-auto max-w-7xl p-8">
+      <main className="mx-auto max-w-7xl p-6">
         <div className="rounded-xl border border-bad/40 bg-bad/5 p-5 text-bad">
           Failed to load founder update: {error}
         </div>
@@ -49,265 +45,219 @@ export default function FounderUpdatePage() {
   }
   if (!data) {
     return (
-      <main className="mx-auto max-w-7xl space-y-10 px-4 sm:px-6 py-10">
-        <div className="space-y-3">
-          <div className="skeleton h-3 w-24" />
-          <div className="skeleton h-10 w-96" />
-        </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {Array.from({ length: 3 }).map((_, i) => <div key={i} className="skeleton h-72" />)}
+      <main className="mx-auto grid h-[calc(100vh-56px)] max-w-7xl grid-rows-[auto_1fr] gap-4 px-4 py-4">
+        <div className="skeleton h-10 w-72" />
+        <div className="grid grid-cols-2 grid-rows-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton" />)}
         </div>
       </main>
     );
   }
 
-  const { pickup, occupancy, reviews } = data;
+  const { pickup, occupancy, todayOccupancy, reviews } = data;
+  const expectedPct = pickup.daysInMonth > 0
+    ? (pickup.daysElapsed / pickup.daysInMonth) * 100
+    : 0;
 
   return (
-    <main className="mx-auto max-w-7xl space-y-10 px-4 sm:px-6 py-10 animate-fade-in">
-      {/* Hero */}
-      <section className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
+    // Fixed-height main: header row + 2x2 grid in remaining space. No scroll on lg+.
+    <main className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:h-[calc(100vh-56px)] lg:overflow-hidden animate-fade-in">
+      {/* Compact hero */}
+      <header className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="flex items-baseline gap-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-accent">
             Founder Update
           </p>
-          <h1 className="mt-2 font-serif text-display-lg tracking-tight text-text">
-            The Daily 3-Number Dashboard
+          <h1 className="font-serif text-xl sm:text-2xl tracking-tight text-text">
+            The Daily 4-Number Dashboard
           </h1>
-          <p className="mt-1.5 text-sm text-muted">
-            Pacing · Forward occupancy · Review score · auto-refresh 15 min ·{" "}
-            <span className="text-text">{new Date(data.generatedAt).toLocaleTimeString()}</span>
-          </p>
         </div>
-        <button
-          onClick={load}
-          disabled={refreshing}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-panel px-3 py-2 text-sm text-text shadow-ring transition-colors hover:border-borderStrong disabled:opacity-50"
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] text-faint">
+            {new Date(data.generatedAt).toLocaleTimeString()}
+          </span>
+          <button
+            onClick={load}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-panel px-2.5 py-1.5 text-xs text-text transition-colors hover:border-borderStrong disabled:opacity-50"
+          >
+            <svg className={refreshing ? "animate-spin text-accent" : "text-muted"} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><polyline points="21 3 21 8 16 8" />
+            </svg>
+            {refreshing ? "…" : "Refresh"}
+          </button>
+        </div>
+      </header>
+
+      {/* 2x2 grid filling the remaining viewport */}
+      <div className="grid flex-1 grid-cols-1 grid-rows-[auto] gap-3 sm:gap-4 lg:grid-cols-2 lg:grid-rows-2 lg:min-h-0">
+        {/* ── 1. Revenue Pickup ── */}
+        <Card
+          number={1}
+          label="Revenue Pickup"
+          title="Pacing vs Target"
+          description="How much new revenue was booked yesterday? Are we ahead or behind the monthly goal?"
+          badge={<PaceBadge status={pickup.paceStatus} variance={pickup.variance} />}
         >
-          <svg className={refreshing ? "animate-spin text-accent" : "text-muted"} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><polyline points="21 3 21 8 16 8" />
-          </svg>
-          {refreshing ? "Refreshing" : "Refresh"}
-        </button>
-      </section>
-
-      {/* Card 1: Revenue Pickup · Pacing vs Target */}
-      <section className="rounded-2xl border border-border bg-panel p-6 sm:p-8 shadow-soft">
-        <div className="flex items-baseline justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">
-              1 · Revenue Pickup
-            </p>
-            <h2 className="mt-2 font-serif text-3xl sm:text-4xl tracking-tight text-accent">
-              Pacing vs Target
-            </h2>
-          </div>
-          <PaceBadge status={pickup.paceStatus} variance={pickup.variance} />
-        </div>
-
-        <div className="mt-6 grid gap-6 md:grid-cols-2">
-          {/* Yesterday */}
-          <div className="rounded-xl border border-border/60 bg-panel2/40 p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">
-              Booked yesterday · {fmtDate(pickup.yesterdayDate)}
-            </p>
-            <p className="mt-2 text-display tabular-nums font-semibold text-text">
-              {fmtMoney(pickup.yesterdayRevenue)}
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              {pickup.yesterdayBookings} new booking{pickup.yesterdayBookings === 1 ? "" : "s"}
-            </p>
-          </div>
-
-          {/* MTD vs target */}
-          <div className="rounded-xl border border-border/60 bg-panel2/40 p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">
-              {pickup.monthLabel} · Day {pickup.daysElapsed} of {pickup.daysInMonth}
-            </p>
-            <p className="mt-2 text-display tabular-nums font-semibold text-text">
+          <div className="flex items-baseline gap-3">
+            <span className="font-serif text-5xl sm:text-6xl tabular-nums font-semibold text-text">
               {fmtMoneyK(pickup.actualMtdRevenue)}
-              <span className="text-faint"> / </span>
-              <span className="text-muted">{fmtMoneyK(pickup.target)}</span>
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              Expected pace: <span className="text-text tabular-nums">{fmtMoneyK(pickup.expectedPace)}</span>
-              {" · "}
-              <span className={
-                pickup.paceStatus === "ahead"  ? "text-good" :
-                pickup.paceStatus === "behind" ? "text-bad"  : "text-text"
-              }>
-                {pickup.paceStatus === "ahead"  && `ahead by ${fmtMoney(pickup.variance)}`}
-                {pickup.paceStatus === "behind" && `behind by ${fmtMoney(pickup.variance)}`}
-                {pickup.paceStatus === "on-track" && "on track"}
-              </span>
-            </p>
-          </div>
-        </div>
-
-        {/* Pacing bar */}
-        <div className="mt-6">
-          <div className="mb-1.5 flex justify-between text-[10px] uppercase tracking-wider">
-            <span className="text-faint">Progress toward {fmtMoneyK(pickup.target)} target</span>
-            <span className={
-              "tabular-nums font-bold " + (
-                pickup.paceStatus === "ahead"  ? "text-good" :
-                pickup.paceStatus === "behind" ? "text-bad"  : "text-text"
-              )
-            }>
-              {pickup.pctOfTarget.toFixed(1)}%
             </span>
+            <span className="text-lg sm:text-xl text-faint tabular-nums">/ {fmtMoneyK(pickup.target)}</span>
           </div>
-          <div className="relative h-3 w-full overflow-hidden rounded-full bg-panel3">
-            {/* Actual */}
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-panel3">
             <div
               className={
-                "absolute inset-y-0 left-0 rounded-full transition-all duration-700 " + (
+                "h-full rounded-full transition-all duration-700 " + (
                   pickup.paceStatus === "ahead"  ? "bg-good" :
                   pickup.paceStatus === "behind" ? "bg-bad"  : "bg-accent"
                 )
               }
               style={{ width: `${Math.min(100, pickup.pctOfTarget)}%` }}
             />
-            {/* Expected pace marker */}
             <div
-              className="absolute inset-y-0 w-px bg-text/80"
-              style={{ left: `${Math.min(100, (pickup.daysElapsed / pickup.daysInMonth) * 100)}%` }}
-              title="Expected pace"
+              className="relative -mt-2 h-2 w-px bg-text/80"
+              style={{ marginLeft: `${Math.min(100, expectedPct)}%` }}
             />
           </div>
-          <p className="mt-1.5 text-[10px] text-faint">
-            Vertical line = expected pace for day {pickup.daysElapsed} of {pickup.daysInMonth}
+          <p className="mt-2 text-[11px] text-muted">
+            Yesterday: <span className="tabular-nums text-text">{fmtMoney(pickup.yesterdayRevenue)}</span>
+            {" "}({pickup.yesterdayBookings} booking{pickup.yesterdayBookings === 1 ? "" : "s"})
+            {" · "}
+            Day {pickup.daysElapsed}/{pickup.daysInMonth} · Pace {fmtMoneyK(pickup.expectedPace)}
           </p>
-        </div>
+        </Card>
 
-        <p className="mt-5 text-xs text-muted">
-          How much new revenue was booked yesterday? Are we ahead or behind the monthly goal?
-        </p>
-      </section>
-
-      {/* Card 2: Portfolio Occupancy · 30-Day Forward */}
-      <section className="rounded-2xl border border-border bg-panel p-6 sm:p-8 shadow-soft">
-        <div className="flex items-baseline justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">
-              2 · Portfolio Occupancy
-            </p>
-            <h2 className="mt-2 font-serif text-3xl sm:text-4xl tracking-tight text-accent">
-              30-Day Forward
-            </h2>
-          </div>
-          <span className="rounded-full border border-border bg-panel2 px-3 py-1 text-[11px] text-muted whitespace-nowrap">
-            {fmtDate(occupancy.start)} → {fmtDate(occupancy.end)}
-          </span>
-        </div>
-
-        <div className="mt-6 grid gap-6 md:grid-cols-3">
-          <div className="rounded-xl border border-border/60 bg-panel2/40 p-5 md:col-span-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">
-              Forward occupancy
-            </p>
-            <p className={
-              "mt-2 text-display-lg tabular-nums font-semibold " + occColor(occupancy.occupancyPct)
+        {/* ── 2. Portfolio Occupancy · 30-Day Forward ── */}
+        <Card
+          number={2}
+          label="Portfolio Occupancy"
+          title="30-Day Forward"
+          description="What percentage of our calendar is booked for the next 30 days? Identifies upcoming gaps."
+        >
+          <div className="flex items-baseline gap-3">
+            <span className={
+              "font-serif text-5xl sm:text-6xl tabular-nums font-semibold " + occColor(occupancy.occupancyPct)
             }>
               {occupancy.occupancyPct.toFixed(1)}%
-            </p>
+            </span>
+            <span className="text-sm text-muted tabular-nums">
+              {occupancy.occupiedNights.toLocaleString()} / {occupancy.totalNightsAvailable.toLocaleString()} nights
+            </span>
           </div>
-
-          <div className="rounded-xl border border-border/60 bg-panel2/40 p-5 md:col-span-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">
-              Nights booked · {occupancy.totalProperties} listings
-            </p>
-            <p className="mt-2 text-display tabular-nums font-semibold text-text">
-              {occupancy.occupiedNights.toLocaleString()}
-              <span className="text-faint"> / </span>
-              <span className="text-muted">{occupancy.totalNightsAvailable.toLocaleString()}</span>
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              {(occupancy.totalNightsAvailable - occupancy.occupiedNights).toLocaleString()} open nights to fill
-            </p>
-            <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-panel3">
-              <div
-                className={"h-full rounded-full transition-all duration-700 " + occBar(occupancy.occupancyPct)}
-                style={{ width: `${occupancy.occupancyPct}%` }}
-              />
-            </div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-panel3">
+            <div
+              className={"h-full rounded-full transition-all duration-700 " + occBar(occupancy.occupancyPct)}
+              style={{ width: `${occupancy.occupancyPct}%` }}
+            />
           </div>
-        </div>
+          <p className="mt-2 text-[11px] text-muted">
+            Next 30 days · {occupancy.totalProperties} listings · {" "}
+            <span className="tabular-nums text-text">
+              {(occupancy.totalNightsAvailable - occupancy.occupiedNights).toLocaleString()}
+            </span> open nights to fill
+          </p>
+        </Card>
 
-        <p className="mt-5 text-xs text-muted">
-          What percentage of our calendar is booked for the next 30 days? Identifies upcoming gaps.
-        </p>
-      </section>
-
-      {/* Card 3: Average Review Score · Trailing 30 Days */}
-      <section className="rounded-2xl border border-border bg-panel p-6 sm:p-8 shadow-soft">
-        <div className="flex items-baseline justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">
-              3 · Average Review Score
-            </p>
-            <h2 className="mt-2 font-serif text-3xl sm:text-4xl tracking-tight text-accent">
-              Trailing 30 Days
-            </h2>
+        {/* ── 3. Today's Occupancy ── */}
+        <Card
+          number={3}
+          label="Today's Occupancy"
+          title="Right Now"
+          description="How many of our listings are occupied tonight versus sitting empty."
+        >
+          <div className="flex items-baseline gap-3">
+            <span className={
+              "font-serif text-5xl sm:text-6xl tabular-nums font-semibold " + occColor(todayOccupancy.occupancyPct)
+            }>
+              {todayOccupancy.occupancyPct}%
+            </span>
+            <span className="text-sm text-muted tabular-nums">
+              {todayOccupancy.occupied} / {todayOccupancy.totalProperties} occupied
+            </span>
           </div>
-          <span className="rounded-full border border-border bg-panel2 px-3 py-1 text-[11px] text-muted whitespace-nowrap">
-            {fmtDate(reviews.windowStart)} → {fmtDate(reviews.windowEnd)}
-          </span>
-        </div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-panel3">
+            <div
+              className={"h-full rounded-full transition-all duration-700 " + occBar(todayOccupancy.occupancyPct)}
+              style={{ width: `${todayOccupancy.occupancyPct}%` }}
+            />
+          </div>
+          <p className="mt-2 text-[11px] text-muted">
+            <span className="tabular-nums text-text">{todayOccupancy.vacant}</span> vacant ·{" "}
+            <span className="tabular-nums text-text">{todayOccupancy.occupied}</span> with guests checked in
+          </p>
+        </Card>
 
-        <div className="mt-6 grid gap-6 md:grid-cols-3">
-          <div className="rounded-xl border border-border/60 bg-panel2/40 p-5 md:col-span-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">
-              Average rating
-            </p>
-            <p className={
-              "mt-2 text-display-lg tabular-nums font-semibold " + reviewColor(reviews.avg)
+        {/* ── 4. Average Review Score · Trailing 30 Days ── */}
+        <Card
+          number={4}
+          label="Average Review Score"
+          title="Trailing 30 Days"
+          description="The leading indicator of future revenue. A drop here means a drop in bookings next month."
+        >
+          <div className="flex items-baseline gap-3">
+            <span className={
+              "font-serif text-5xl sm:text-6xl tabular-nums font-semibold " + reviewColor(reviews.avg)
             }>
               {reviews.count > 0 ? reviews.avg.toFixed(2) : "—"}
-              <span className="ml-1 text-muted text-2xl">/ 5</span>
-            </p>
-            <div className="mt-2 tracking-wider text-xl">
+            </span>
+            <span className="text-lg text-muted">/ 5</span>
+            <span className="ml-auto tracking-wider text-lg sm:text-xl">
               <span className="text-warn">{"★".repeat(Math.round(reviews.avg))}</span>
               <span className="text-borderStrong">{"★".repeat(5 - Math.round(reviews.avg))}</span>
-            </div>
+            </span>
           </div>
-
-          <div className="rounded-xl border border-border/60 bg-panel2/40 p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">
-              Reviews in window
-            </p>
-            <p className="mt-2 text-display tabular-nums font-semibold text-text">
-              {reviews.count.toLocaleString()}
-            </p>
-            <p className="mt-1 text-xs text-muted">last 30 days</p>
-          </div>
-
-          <div className="rounded-xl border border-border/60 bg-panel2/40 p-5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">
-              vs prior 30 days
-            </p>
-            <p className={
-              "mt-2 text-display tabular-nums font-semibold " + (
-                reviews.delta > 0.01  ? "text-good" :
-                reviews.delta < -0.01 ? "text-bad"  : "text-text"
-              )
+          <div className="mt-2 flex items-baseline gap-2 text-[11px]">
+            <span className="text-muted">{reviews.count} reviews · last 30 days</span>
+            <span className="text-faint">·</span>
+            <span className={
+              reviews.delta > 0.01  ? "text-good font-semibold" :
+              reviews.delta < -0.01 ? "text-bad  font-semibold" : "text-muted"
             }>
-              {reviews.delta > 0 ? "+" : ""}{reviews.delta.toFixed(2)}
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              prev avg: <span className="text-text tabular-nums">
-                {reviews.prevCount > 0 ? reviews.prevAvg.toFixed(2) : "—"}
-              </span>
-              {" "}({reviews.prevCount} reviews)
-            </p>
+              {reviews.delta > 0 ? "▲" : reviews.delta < 0 ? "▼" : "●"}{" "}
+              {reviews.delta > 0 ? "+" : ""}{reviews.delta.toFixed(2)} vs prev
+            </span>
+            <span className="text-faint">·</span>
+            <span className="text-muted tabular-nums">
+              prev: {reviews.prevCount > 0 ? reviews.prevAvg.toFixed(2) : "—"}
+            </span>
           </div>
-        </div>
-
-        <p className="mt-5 text-xs text-muted">
-          The leading indicator of future revenue. A drop here means a drop in bookings next month.
-        </p>
-      </section>
+        </Card>
+      </div>
     </main>
+  );
+}
+
+// ─── Card ────────────────────────────────────────────────────────────────────
+
+function Card({
+  number, label, title, description, badge, children,
+}: {
+  number: number;
+  label: string;
+  title: string;
+  description: string;
+  badge?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex min-h-0 flex-col rounded-2xl border border-border bg-panel p-4 sm:p-5 shadow-soft">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">
+          {number} · {label}
+        </p>
+        {badge}
+      </div>
+      <h2 className="mt-1 font-serif text-xl sm:text-2xl tracking-tight text-accent">
+        {title}
+      </h2>
+      <div className="mt-3 flex-1 min-h-0 flex flex-col justify-center">
+        {children}
+      </div>
+      <p className="mt-3 text-[10px] leading-snug text-faint line-clamp-2">
+        {description}
+      </p>
+    </section>
   );
 }
 
@@ -319,11 +269,11 @@ function PaceBadge({
     status === "behind" ? "border-bad/40  bg-bad/10  text-bad"  :
                           "border-border  bg-panel2  text-text";
   const label =
-    status === "ahead"  ? `▲ Ahead by $${Math.abs(variance).toLocaleString()}` :
-    status === "behind" ? `▼ Behind by $${Math.abs(variance).toLocaleString()}` :
+    status === "ahead"  ? `▲ Ahead $${Math.abs(variance).toLocaleString()}` :
+    status === "behind" ? `▼ Behind $${Math.abs(variance).toLocaleString()}` :
                           "● On track";
   return (
-    <span className={"rounded-full border px-3 py-1 text-xs font-semibold whitespace-nowrap " + cls}>
+    <span className={"rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap " + cls}>
       {label}
     </span>
   );
