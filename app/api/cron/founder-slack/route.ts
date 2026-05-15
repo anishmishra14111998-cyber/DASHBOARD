@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { buildFounderSnapshot, type FounderSnapshot } from "@/lib/founder";
 
-// Daily founder update — fires from Vercel Cron at 7 21 * * * UTC
-// (= 02:37 AM IST). Posts a rich Slack Block Kit message to the founder
+// Daily founder update — fires from Vercel Cron at 15 21 * * * UTC
+// (= 02:45 AM IST). Posts a rich Slack Block Kit message to the founder
 // channel summarising the four headline metrics. No screenshot pipeline —
 // Vercel's runtime can't run headless Chromium reliably (libnss3 missing),
 // and a well-formatted Block Kit message is more scannable on mobile anyway.
