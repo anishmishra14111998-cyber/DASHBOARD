@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { isValidLinkToken } from "@/lib/linkToken";
+
+const COOKIE_NAME    = "dashboard-session";
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 // HTTP Basic Auth. Primary creds: DASHBOARD_USER / DASHBOARD_PASS.
 // Extra users: DASHBOARD_EXTRA_USERS as comma-separated "user:pass" pairs.
@@ -14,11 +18,42 @@ function isAuthorised(user: string, pass: string): boolean {
   return false;
 }
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   if (!process.env.DASHBOARD_USER || !process.env.DASHBOARD_PASS) {
     return new NextResponse("DASHBOARD_USER / DASHBOARD_PASS not set", { status: 503 });
   }
 
+  // Shared secret used to sign and verify magic-link tokens. Reuse CRON_SECRET
+  // (already set in Vercel) so we don't have to manage another env var; fall
+  // back to DASHBOARD_PASS so this still works if CRON_SECRET isn't set.
+  const linkSecret = process.env.CRON_SECRET ?? process.env.DASHBOARD_PASS!;
+
+  // 1. Existing session cookie — silent pass-through for any in-page request
+  //    (including /api/* calls) once the founder has clicked the magic link.
+  const cookie = req.cookies.get(COOKIE_NAME)?.value;
+  if (cookie && await isValidLinkToken(cookie, linkSecret)) {
+    return NextResponse.next();
+  }
+
+  // 2. Magic-link query token — first hit from the Slack message. Validate,
+  //    set the cookie, and redirect to the same URL with `?auth=` stripped
+  //    so the credentials don't sit in the address bar / browser history.
+  const queryToken = req.nextUrl.searchParams.get("auth");
+  if (queryToken && await isValidLinkToken(queryToken, linkSecret)) {
+    const cleanUrl = new URL(req.url);
+    cleanUrl.searchParams.delete("auth");
+    const res = NextResponse.redirect(cleanUrl);
+    res.cookies.set(COOKIE_NAME, queryToken, {
+      maxAge:   COOKIE_MAX_AGE,
+      path:     "/",
+      httpOnly: true,
+      sameSite: "lax",
+      secure:   true,
+    });
+    return res;
+  }
+
+  // 3. Fall back to HTTP basic auth for people typing the URL directly.
   const auth = req.headers.get("authorization");
   if (auth?.startsWith("Basic ")) {
     const decoded = atob(auth.slice(6));

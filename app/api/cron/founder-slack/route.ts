@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildFounderSnapshot, type FounderSnapshot } from "@/lib/founder";
+import { buildLinkToken } from "@/lib/linkToken";
 
 // Daily founder update — fires from Vercel Cron at 35 21 * * * UTC
 // (= 03:05 AM IST). Posts a rich Slack Block Kit message to the founder
@@ -53,7 +54,8 @@ function fmtIstDate(): string {
 }
 
 // Slack Block Kit payload — header, four metric sections, divider, footer link.
-function buildBlocks(snap: FounderSnapshot, dashboardUrl?: string) {
+// `linkUrl` already has any auth token / credentials baked in.
+function buildBlocks(snap: FounderSnapshot, linkUrl?: string) {
   const { pickup, occupancy, todayOccupancy, reviews } = snap;
 
   // --- 1. Revenue Pickup ---
@@ -126,19 +128,7 @@ function buildBlocks(snap: FounderSnapshot, dashboardUrl?: string) {
     { type: "section", text: { type: "mrkdwn", text: reviewSection  } },
   ];
 
-  if (dashboardUrl) {
-    // Embed basic-auth creds so the founder doesn't get prompted on click.
-    // Visible to anyone with channel access — fine for a private founder-only
-    // channel; if you ever broaden the channel, swap this for a signed token.
-    const user = process.env.DASHBOARD_USER;
-    const pass = process.env.DASHBOARD_PASS;
-    const linkUrl =
-      user && pass
-        ? dashboardUrl.replace(
-            /^https?:\/\//,
-            (m) => `${m}${encodeURIComponent(user)}:${encodeURIComponent(pass)}@`,
-          ) + "/founder"
-        : `${dashboardUrl}/founder`;
+  if (linkUrl) {
     blocks.push({
       type: "context",
       elements: [
@@ -173,7 +163,17 @@ async function postToSlack(snap: FounderSnapshot): Promise<void> {
   if (!token)   throw new Error("SLACK_BOT_TOKEN not set");
   if (!channel) throw new Error("SLACK_FOUNDER_CHANNEL not set");
 
-  const blocks = buildBlocks(snap, process.env.DASHBOARD_PUBLIC_URL);
+  // Mint a 7-day signed token. The middleware validates it, sets a session
+  // cookie, and redirects to a clean /founder URL so the token doesn't sit
+  // in the browser address bar.
+  const baseUrl    = process.env.DASHBOARD_PUBLIC_URL;
+  const linkSecret = process.env.CRON_SECRET ?? process.env.DASHBOARD_PASS;
+  const linkUrl =
+    baseUrl && linkSecret
+      ? `${baseUrl}/founder?auth=${await buildLinkToken(linkSecret)}`
+      : undefined;
+
+  const blocks = buildBlocks(snap, linkUrl);
   const text   = buildFallbackText(snap);
 
   const res = await fetch(`${SLACK_API}/chat.postMessage`, {
