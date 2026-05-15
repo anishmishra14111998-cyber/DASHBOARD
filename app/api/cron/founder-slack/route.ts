@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
-import chromium from "@sparticuz/chromium";
+import chromium from "@sparticuz/chromium-min";
 import puppeteer, { type Browser } from "puppeteer-core";
+
+// chromium-min downloads the headless Chromium pack at runtime from this URL
+// (cached in /tmp across warm invocations). Vercel's serverless runtime is
+// missing libnss3.so so we can't use the bundled @sparticuz/chromium variant
+// — the pack URL bundles libnss3 alongside the binary in a single tar.
+const CHROMIUM_PACK_URL =
+  "https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar";
 import { buildFounderSnapshot } from "@/lib/founder";
 import { nyToday } from "@/lib/datetime";
 
@@ -45,7 +52,7 @@ async function retry<T>(
   throw lastErr;
 }
 
-async function captureScreenshot(): Promise<Buffer> {
+async function captureScreenshot(): Promise<Uint8Array> {
   const baseUrl  = process.env.DASHBOARD_PUBLIC_URL;
   const username = process.env.DASHBOARD_USER;
   const password = process.env.DASHBOARD_PASS;
@@ -57,7 +64,7 @@ async function captureScreenshot(): Promise<Buffer> {
     browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: { width: 1600, height: 1000, deviceScaleFactor: 2 },
-      executablePath: await chromium.executablePath(),
+      executablePath: await chromium.executablePath(CHROMIUM_PACK_URL),
       headless: true,
     });
     const page = await browser.newPage();
@@ -80,7 +87,7 @@ async function captureScreenshot(): Promise<Buffer> {
     // Belt-and-suspenders — give the fade-in animation a moment to settle.
     await sleep(800);
 
-    return Buffer.from(await page.screenshot({ type: "png", fullPage: false }));
+    return new Uint8Array(await page.screenshot({ type: "png", fullPage: false }));
   } finally {
     if (browser) await browser.close().catch(() => undefined);
   }
@@ -88,7 +95,7 @@ async function captureScreenshot(): Promise<Buffer> {
 
 interface UploadUrlResult { upload_url: string; file_id: string }
 
-async function postToSlack(png: Buffer, caption: string): Promise<void> {
+async function postToSlack(png: Uint8Array, caption: string): Promise<void> {
   const token   = process.env.SLACK_BOT_TOKEN;
   const channel = process.env.SLACK_FOUNDER_CHANNEL;
   if (!token)   throw new Error("SLACK_BOT_TOKEN not set");
@@ -111,11 +118,13 @@ async function postToSlack(png: Buffer, caption: string): Promise<void> {
   }
   const { upload_url, file_id } = step1 as UploadUrlResult;
 
-  // Step 2: PUT the bytes to that URL.
+  // Step 2: PUT the bytes to that URL. Cast: TS's lib.dom + lib.webworker
+  // typings narrow BodyInit to Uint8Array<ArrayBuffer>, but puppeteer hands
+  // back Uint8Array<ArrayBufferLike>. The bytes are valid at runtime.
   const step2 = await fetch(upload_url, {
     method:  "POST",
     headers: { "Content-Type": "image/png" },
-    body:    png,
+    body:    png as unknown as BodyInit,
   });
   if (!step2.ok) {
     throw new Error(`Upload PUT failed: ${step2.status} ${await step2.text()}`);
