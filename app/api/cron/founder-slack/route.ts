@@ -127,10 +127,22 @@ function buildBlocks(snap: FounderSnapshot, dashboardUrl?: string) {
   ];
 
   if (dashboardUrl) {
+    // Embed basic-auth creds so the founder doesn't get prompted on click.
+    // Visible to anyone with channel access — fine for a private founder-only
+    // channel; if you ever broaden the channel, swap this for a signed token.
+    const user = process.env.DASHBOARD_USER;
+    const pass = process.env.DASHBOARD_PASS;
+    const linkUrl =
+      user && pass
+        ? dashboardUrl.replace(
+            /^https?:\/\//,
+            (m) => `${m}${encodeURIComponent(user)}:${encodeURIComponent(pass)}@`,
+          ) + "/founder"
+        : `${dashboardUrl}/founder`;
     blocks.push({
       type: "context",
       elements: [
-        { type: "mrkdwn", text: `:bar_chart: View the live dashboard → <${dashboardUrl}/founder|/founder>` },
+        { type: "mrkdwn", text: `:bar_chart: <${linkUrl}|Open the live dashboard>` },
       ],
     });
   }
