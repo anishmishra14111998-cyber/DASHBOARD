@@ -23,6 +23,20 @@ export interface Reservation {
 
   status: "confirmed" | "cancelled" | "pending";
   createdAt?: string;   // ISO — when the reservation was booked (from Guesty createdAt)
+
+  // Payment status + cleared payment transactions surfaced from Guesty.
+  // Used to derive a "cash received" basis (when money actually hits the
+  // account) independent of when the booking was made or the stay happens.
+  paymentStatus?: string;        // "paid" | "partially_paid" | "unpaid" | ...
+  balanceDue?: number;
+  payments?: ReservationPayment[];
+}
+
+export interface ReservationPayment {
+  amount: number;                // positive for incoming, negative for refunds
+  status: string;                // "succeeded" / "captured" / "pending" / ...
+  paidAt: string;                // YYYY-MM-DD — first non-empty of paidAt/capturedAt/createdAt
+  method?: string;               // e.g. "credit_card", "channel-payout"
 }
 
 export interface Property {

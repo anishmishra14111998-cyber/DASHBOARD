@@ -40,6 +40,13 @@ const RESERVATION_FIELDS = [
   "money.currency",
   // Line items — required to extract "Other Fees" (damage waivers, pet/resort fees, upsells).
   "money.invoiceItems",
+  // Payment status + transaction history — used to derive a "cash received"
+  // basis on the Revenue Dashboard (when payouts actually hit the bank, vs
+  // when the booking was made or stay happens). Channel payout dates that
+  // Guesty surfaces come through this `payments` array.
+  "paymentStatus",
+  "payments",
+  "money.balanceDue",
 ].join(" ");
 
 const LISTING_FIELDS = [
@@ -303,8 +310,22 @@ interface GuestyReservation {
     hostPayout?: number;
     currency?: string;
     invoiceItems?: GuestyInvoiceItem[];
+    balanceDue?: number;
   };
   status?: string;
+  paymentStatus?: string;
+  payments?: GuestyPayment[];
+}
+
+interface GuestyPayment {
+  _id?: string;
+  amount?: number;
+  status?: string;          // "succeeded" / "pending" / "failed" / "refunded" / "captured"
+  paidAt?: string;          // ISO — when the payment cleared
+  createdAt?: string;       // ISO — when the payment was initiated
+  capturedAt?: string;      // ISO — alternative cleared timestamp
+  paymentMethod?: { method?: string; type?: string };
+  isAuthorizationHold?: boolean;
 }
 
 interface GuestyInvoiceItem {
@@ -426,6 +447,23 @@ function mapGuestyReservation(r: GuestyReservation): Reservation {
     currency: m.currency ?? "USD",
 
     status: r.status === "confirmed" ? "confirmed" : r.status === "canceled" ? "cancelled" : "pending",
+
+    paymentStatus: r.paymentStatus,
+    balanceDue:    m.balanceDue,
+    payments:      (r.payments ?? [])
+      // Only count cleared transactions — pending/failed don't represent real cash.
+      .filter((p) => {
+        const s = (p.status ?? "").toLowerCase();
+        return s === "succeeded" || s === "captured" || s === "paid" || s === "completed";
+      })
+      .map((p) => ({
+        amount: p.amount ?? 0,
+        status: (p.status ?? "").toLowerCase(),
+        // Use the first non-empty cleared-at date — different channels stamp different fields.
+        paidAt: (p.paidAt ?? p.capturedAt ?? p.createdAt ?? "").slice(0, 10),
+        method: p.paymentMethod?.method ?? p.paymentMethod?.type,
+      }))
+      .filter((p) => p.paidAt !== ""),
   };
 }
 

@@ -11,6 +11,7 @@ import { SourceStatusBar } from "@/components/SourceStatusBar";
 import { TimelineFilter } from "@/components/TimelineFilter";
 import { MtdBasesTable } from "@/components/MtdBasesTable";
 import {
+  buildCashReceived,
   buildChannelCommission,
   buildDailySeries,
   buildNextMonthForecast,
@@ -86,10 +87,16 @@ export default function DashboardPage() {
   const propertyCount = filtered.properties.length;
   const today = buildTodaySnapshot(filtered.reservations, propertyCount);
   const period = buildPeriodBases(filtered.reservations, propertyCount, range);
+  const cash = buildCashReceived(filtered.reservations, range);
   const daily = buildDailySeries(filtered.reservations, propertyCount, range);
   const channels = buildChannelCommission(filtered.reservations, range);
   const nextMonth = buildNextMonthForecast(filtered.reservations, propertyCount);
   const propertyRows = buildPropertyBreakdown(filtered.reservations, filtered.properties, range);
+  const channelLabel = (c: string) =>
+    c === "airbnb" ? "Airbnb" :
+    c === "booking" ? "Booking.com" :
+    c === "vrbo" ? "Vrbo" :
+    c === "guesty-direct" ? "Direct" : "Other";
 
   return (
     <main className="mx-auto max-w-7xl space-y-10 px-6 py-10 animate-fade-in">
@@ -155,6 +162,48 @@ export default function DashboardPage() {
           <MetricCard label="Net Payout" value={fmtMoney(period.stayedNights.netPayout)} sub={`${period.stayedNights.bookings} bookings touched`} tone="good" />
           <MetricCard label="Occupancy" value={`${period.occupancyPct}%`} sub={`${period.stayedNights.nights} / ${period.totalNightsAvailable} nights`} tone="accent" />
         </div>
+      </section>
+
+      {/* Cash basis — actual payouts that cleared in the period, independent
+          of when the booking was made or the stay happens. */}
+      <section>
+        <SectionTitle
+          eyebrow="Cash Basis"
+          title="Received in bank account"
+          right={`${cash.paymentCount} payment${cash.paymentCount === 1 ? "" : "s"} · ${cash.reservationCount} bookings`}
+        />
+        <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+          <MetricCard
+            label="Cash Received"
+            value={fmtMoney(cash.totalReceived)}
+            sub={`${period.rangeLabel.toLowerCase()} · payouts cleared`}
+            tone="accent"
+          />
+          {cash.channels.length === 0 ? (
+            <div className="col-span-3 rounded-xl border border-dashed border-border bg-panel/40 p-5 text-sm text-muted">
+              No payouts cleared in this period via Guesty. Channel-managed
+              bookings (Airbnb, Booking.com, Vrbo) usually pay out directly
+              to your bank — those amounts won't appear here unless the
+              channel is wired into Guesty Payments.
+            </div>
+          ) : (
+            cash.channels.slice(0, 3).map((c) => (
+              <MetricCard
+                key={c.channel}
+                label={channelLabel(c.channel)}
+                value={fmtMoney(c.amount)}
+                sub={`${c.count} payment${c.count === 1 ? "" : "s"}`}
+              />
+            ))
+          )}
+        </div>
+        {cash.channels.length > 0 && (
+          <p className="mt-2 px-1 text-[11px] text-muted">
+            ↳ Booking-basis revenue for the same window is{" "}
+            <span className="text-text">{fmtMoney(period.stayedNights.grossRevenue)}</span>.
+            Cash can lag bookings by days to weeks depending on channel payout terms.
+          </p>
+        )}
       </section>
 
       {/* New bookings received today — compact bar, click pending to expand */}

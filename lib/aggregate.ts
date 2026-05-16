@@ -464,6 +464,63 @@ export function buildPropertyBreakdown(
     .sort((a, b) => b.grossRevenue - a.grossRevenue);
 }
 
+// ---- Cash-received basis (sum of Guesty payments cleared in range) ----
+//
+// This is the "money actually hit the account" view. Each Reservation
+// carries a list of cleared payments (see lib/types.ts ReservationPayment)
+// — we sum by paidAt date independent of when the booking was made or the
+// stay happens. Useful for cash-flow visibility.
+//
+// Caveat: Guesty only sees payments that flow through Guesty Payments. For
+// channel-managed bookings (Airbnb / Booking.com handle payouts directly),
+// the payments array may be empty even though revenue was earned. Those
+// gaps surface as missing rows here — surface that in the UI.
+
+export interface CashReceivedSummary {
+  rangeStart: string;
+  rangeEnd: string;
+  totalReceived: number;     // gross cash received in range (rounded)
+  paymentCount: number;
+  reservationCount: number;  // distinct reservations contributing
+  channels: { channel: Channel; amount: number; count: number }[];
+}
+
+export function buildCashReceived(
+  reservations: Reservation[],
+  range: DateRange,
+): CashReceivedSummary {
+  let totalReceived = 0;
+  let paymentCount  = 0;
+  const reservationIds = new Set<string>();
+  const byChannel = new Map<Channel, { amount: number; count: number }>();
+
+  for (const r of reservations) {
+    if (!r.payments?.length) continue;
+    for (const p of r.payments) {
+      if (!p.paidAt) continue;
+      if (p.paidAt < range.start || p.paidAt > range.end) continue;
+      totalReceived += p.amount;
+      paymentCount  += 1;
+      reservationIds.add(r.id);
+      const prev = byChannel.get(r.channel) ?? { amount: 0, count: 0 };
+      prev.amount += p.amount;
+      prev.count  += 1;
+      byChannel.set(r.channel, prev);
+    }
+  }
+
+  return {
+    rangeStart:       range.start,
+    rangeEnd:         range.end,
+    totalReceived:    Math.round(totalReceived),
+    paymentCount,
+    reservationCount: reservationIds.size,
+    channels: [...byChannel.entries()]
+      .map(([channel, v]) => ({ channel, amount: Math.round(v.amount), count: v.count }))
+      .sort((a, b) => b.amount - a.amount),
+  };
+}
+
 // ---- Channel commission (filtered to range, by check-in date) ---------
 
 export interface ChannelCommissionPoint {
