@@ -164,27 +164,27 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Cash basis — actual payouts that cleared in the period, independent
-          of when the booking was made or the stay happens. */}
+      {/* Cash flow — estimated payouts hitting the bank in the period,
+          derived from channel payout rules since Guesty doesn't surface
+          actual payment dates for channel-managed bookings. */}
       <section>
         <SectionTitle
-          eyebrow="Cash Basis"
-          title="Received in bank account"
-          right={`${cash.paymentCount} payment${cash.paymentCount === 1 ? "" : "s"} · ${cash.reservationCount} bookings`}
+          eyebrow="Cash Flow · Estimated"
+          title="Payouts hitting the bank"
+          right={`${cash.reservationCount} bookings`}
         />
         <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
           <MetricCard
-            label="Cash Received"
+            label="Estimated Payouts"
             value={fmtMoney(cash.totalReceived)}
-            sub={`${period.rangeLabel.toLowerCase()} · payouts cleared`}
+            sub={`${period.rangeLabel.toLowerCase()} · channel-rule estimate`}
             tone="accent"
           />
           {cash.channels.length === 0 ? (
             <div className="col-span-3 rounded-xl border border-dashed border-border bg-panel/40 p-5 text-sm text-muted">
-              No payouts cleared in this period via Guesty. Channel-managed
-              bookings (Airbnb, Booking.com, Vrbo) usually pay out directly
-              to your bank — those amounts won't appear here unless the
-              channel is wired into Guesty Payments.
+              No payouts expected in this window. Channel-rule estimates use
+              check-in / checkout dates, so a future range will only fill in
+              once those bookings land.
             </div>
           ) : (
             cash.channels.slice(0, 3).map((c) => (
@@ -192,18 +192,19 @@ export default function DashboardPage() {
                 key={c.channel}
                 label={channelLabel(c.channel)}
                 value={fmtMoney(c.amount)}
-                sub={`${c.count} payment${c.count === 1 ? "" : "s"}`}
+                sub={`${c.count} booking${c.count === 1 ? "" : "s"}`}
               />
             ))
           )}
         </div>
-        {cash.channels.length > 0 && (
-          <p className="mt-2 px-1 text-[11px] text-muted">
-            ↳ Booking-basis revenue for the same window is{" "}
-            <span className="text-text">{fmtMoney(period.stayedNights.grossRevenue)}</span>.
-            Cash can lag bookings by days to weeks depending on channel payout terms.
-          </p>
-        )}
+        <p className="mt-2 px-1 text-[11px] text-muted leading-relaxed">
+          ↳ Estimated using standard channel payout timing — Airbnb / Vrbo:{" "}
+          <span className="text-text">24h after check-in</span> · Booking.com:{" "}
+          <span className="text-text">~30 days after checkout</span> · Direct:{" "}
+          <span className="text-text">booking date</span>. Booking-basis revenue
+          for the same window is{" "}
+          <span className="text-text">{fmtMoney(period.stayedNights.grossRevenue)}</span>.
+        </p>
       </section>
 
       {/* New bookings received today — compact bar, click pending to expand */}

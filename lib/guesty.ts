@@ -1,8 +1,9 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { Redis } from "@upstash/redis";
-import type { Property, Reservation, SourceStatus } from "./types";
+import type { Channel, Property, Reservation, ReservationPayment, SourceStatus } from "./types";
 import { generateReservations, properties as mockProperties } from "./mockData";
+import { addDaysIso } from "./datetime";
 
 // Upstash Redis client — only used when KV_REST_API_URL/TOKEN are set.
 // Vercel auto-injects these via the Upstash marketplace integration.
@@ -371,6 +372,51 @@ interface GuestyListing {
   bedrooms?: number;
 }
 
+// Estimated payout date per channel, used to derive a "cash basis" view
+// when Guesty doesn't expose actual payments (most non-Guesty-Payments setups).
+// These are rough industry-standard defaults; tune if your contract differs.
+//
+//   Airbnb        - payout 24h after check-in
+//   Vrbo / Expedia- payout 24h after check-in
+//   Booking.com   - guest pays the property directly via card; assume
+//                   ~30 days after checkout as a conservative bank-clear date
+//   Direct        - assume immediate (booking date) — guest paid up front
+//   Other         - 7 days after checkout as a generic fallback
+function estimatePayoutDate(
+  channel: Channel,
+  checkIn: string,
+  checkOut: string,
+  createdAt: string | undefined,
+): string {
+  switch (channel) {
+    case "airbnb":
+    case "vrbo":
+      return addDaysIso(checkIn, 1);
+    case "booking":
+      return addDaysIso(checkOut, 30);
+    case "guesty-direct":
+      return (createdAt ?? checkIn).slice(0, 10);
+    default:
+      return addDaysIso(checkOut, 7);
+  }
+}
+
+function synthesizeEstimatedPayment(
+  channel: Channel,
+  checkIn: string,
+  checkOut: string,
+  createdAt: string | undefined,
+  netPayout: number,
+): ReservationPayment | null {
+  if (!Number.isFinite(netPayout) || netPayout <= 0) return null;
+  return {
+    amount: netPayout,
+    status: "estimated",
+    paidAt: estimatePayoutDate(channel, checkIn, checkOut, createdAt),
+    method: "channel-estimate",
+  };
+}
+
 function detectChannel(r: GuestyReservation): Reservation["channel"] {
   const platform = (r.integration?.platform ?? "").toLowerCase();
   if (platform.startsWith("airbnb")) return "airbnb";
@@ -450,21 +496,40 @@ function mapGuestyReservation(r: GuestyReservation): Reservation {
 
     paymentStatus: r.paymentStatus,
     balanceDue:    m.balanceDue,
-    payments:      (r.payments ?? [])
-      // Only count cleared transactions — pending/failed don't represent real cash.
-      .filter((p) => {
-        const s = (p.status ?? "").toLowerCase();
-        return s === "succeeded" || s === "captured" || s === "paid" || s === "completed";
-      })
-      .map((p) => ({
-        amount: p.amount ?? 0,
-        status: (p.status ?? "").toLowerCase(),
-        // Use the first non-empty cleared-at date — different channels stamp different fields.
-        paidAt: (p.paidAt ?? p.capturedAt ?? p.createdAt ?? "").slice(0, 10),
-        method: p.paymentMethod?.method ?? p.paymentMethod?.type,
-      }))
-      .filter((p) => p.paidAt !== ""),
+    payments:      buildPaymentsList(r, detectChannel(r), netPayout),
   };
+}
+
+function buildPaymentsList(
+  r: GuestyReservation,
+  channel: Channel,
+  netPayout: number,
+): ReservationPayment[] {
+  // 1. Real cleared payments from Guesty (only if Guesty Payments is enabled).
+  const real: ReservationPayment[] = (r.payments ?? [])
+    .filter((p) => {
+      const s = (p.status ?? "").toLowerCase();
+      return s === "succeeded" || s === "captured" || s === "paid" || s === "completed";
+    })
+    .map((p) => ({
+      amount: p.amount ?? 0,
+      status: (p.status ?? "").toLowerCase(),
+      paidAt: (p.paidAt ?? p.capturedAt ?? p.createdAt ?? "").slice(0, 10),
+      method: p.paymentMethod?.method ?? p.paymentMethod?.type,
+    }))
+    .filter((p) => p.paidAt !== "");
+
+  if (real.length > 0) return real;
+
+  // 2. Fallback: synthesize an estimated payout from channel rules so the
+  //    cash-basis view stays useful when Guesty has no payment record.
+  //    Only confirmed bookings get an estimate — cancelled / pending don't.
+  if (r.status !== "confirmed") return [];
+  const checkIn  = r.checkIn?.slice(0, 10);
+  const checkOut = r.checkOut?.slice(0, 10);
+  if (!checkIn || !checkOut) return [];
+  const synthetic = synthesizeEstimatedPayment(channel, checkIn, checkOut, r.createdAt, netPayout);
+  return synthetic ? [synthetic] : [];
 }
 
 function mapGuestyListing(l: GuestyListing): Property {
