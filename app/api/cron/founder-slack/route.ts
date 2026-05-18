@@ -62,63 +62,44 @@ function fmtIstDate(): string {
 function buildBlocks(snap: FounderSnapshot, linkUrl?: string) {
   const { pickup, occupancy, todayOccupancy, reviews } = snap;
 
+  // Emoji policy: only the four section titles get an emoji. Body text is
+  // plain — status is conveyed in words ("Ahead by", "Behind by") and
+  // formatting (bold for the headline number).
+
   // --- 1. Revenue Pickup ---
-  const paceEmoji =
-    pickup.paceStatus === "ahead"  ? ":chart_with_upwards_trend:" :
-    pickup.paceStatus === "behind" ? ":warning:"                 :
-                                     ":white_check_mark:";
   const paceText =
     pickup.paceStatus === "ahead"
-      ? `*Ahead* by ${fmtK(pickup.variance)} ` +
-        `_(day ${pickup.daysElapsed} of ${pickup.daysInMonth}, expected pace ${fmtK(pickup.expectedPace)})_`
+      ? `*Ahead* by ${fmtK(pickup.variance)} _(day ${pickup.daysElapsed} of ${pickup.daysInMonth}, expected pace ${fmtK(pickup.expectedPace)})_`
       : pickup.paceStatus === "behind"
-      ? `*Behind* by ${fmtK(Math.abs(pickup.variance))} ` +
-        `_(day ${pickup.daysElapsed} of ${pickup.daysInMonth}, expected pace ${fmtK(pickup.expectedPace)})_`
+      ? `*Behind* by ${fmtK(Math.abs(pickup.variance))} _(day ${pickup.daysElapsed} of ${pickup.daysInMonth}, expected pace ${fmtK(pickup.expectedPace)})_`
       : `*On track* _(day ${pickup.daysElapsed} of ${pickup.daysInMonth}, pace ${fmtK(pickup.expectedPace)})_`;
 
   const pickupSection =
     `*:dart: 1 · Revenue Pickup — Pacing vs Target*\n` +
     `*${fmtK(pickup.actualMtdRevenue)}* / ${fmtK(pickup.target)} · *${pickup.pctOfTarget.toFixed(0)}% of monthly goal*\n` +
-    `${paceEmoji} ${paceText}\n` +
-    `:moneybag: Yesterday: ${fmtK(pickup.yesterdayRevenue)} from ${pickup.yesterdayBookings} new booking${pickup.yesterdayBookings === 1 ? "" : "s"}`;
+    `${paceText}\n` +
+    `Yesterday: ${fmtK(pickup.yesterdayRevenue)} from ${pickup.yesterdayBookings} new booking${pickup.yesterdayBookings === 1 ? "" : "s"}`;
 
   // --- 2. 30-Day Forward Occupancy ---
-  const fwdEmoji =
-    occupancy.occupancyPct >= 70 ? ":large_green_circle:" :
-    occupancy.occupancyPct >= 50 ? ":large_yellow_circle:" :
-                                   ":red_circle:";
   const fwdSection =
     `*:office: 2 · Portfolio Occupancy — 30-Day Forward*\n` +
-    `${fwdEmoji} *${occupancy.occupancyPct.toFixed(1)}%* occupancy · ${occupancy.occupiedNights.toLocaleString()} / ${occupancy.totalNightsAvailable.toLocaleString()} nights\n` +
+    `*${occupancy.occupancyPct.toFixed(1)}%* occupancy · ${occupancy.occupiedNights.toLocaleString()} / ${occupancy.totalNightsAvailable.toLocaleString()} nights\n` +
     `*${(occupancy.totalNightsAvailable - occupancy.occupiedNights).toLocaleString()}* nights still open across ${occupancy.totalProperties} listings`;
 
   // --- 3. Today's Occupancy ---
-  const todayEmoji =
-    todayOccupancy.occupancyPct >= 70 ? ":large_green_circle:" :
-    todayOccupancy.occupancyPct >= 50 ? ":large_yellow_circle:" :
-                                        ":red_circle:";
   const todaySection =
     `*:house: 3 · Today's Occupancy*\n` +
-    `${todayEmoji} *${todayOccupancy.occupancyPct}%* · ${todayOccupancy.occupied} of ${todayOccupancy.totalProperties} listings with guests\n` +
+    `*${todayOccupancy.occupancyPct}%* · ${todayOccupancy.occupied} of ${todayOccupancy.totalProperties} listings with guests\n` +
     `${todayOccupancy.vacant} vacant tonight`;
 
   // --- 4. Trailing 30-Day Reviews ---
-  const reviewEmoji =
-    reviews.avg >= 4.7 ? ":large_green_circle:" :
-    reviews.avg >= 4.3 ? ":large_yellow_circle:" :
-    reviews.avg <= 0   ? ":white_circle:"       :
-                         ":red_circle:";
-  const stars = reviews.avg > 0
-    ? "★".repeat(Math.round(reviews.avg)) + "☆".repeat(5 - Math.round(reviews.avg))
-    : "—";
   const trend =
-    reviews.delta > 0.01  ? `:chart_with_upwards_trend: *+${reviews.delta.toFixed(2)}* vs prior 30 days (was ${reviews.prevAvg.toFixed(2)})` :
-    reviews.delta < -0.01 ? `:chart_with_downwards_trend: *${reviews.delta.toFixed(2)}* vs prior 30 days (was ${reviews.prevAvg.toFixed(2)})` :
-                            `:white_small_square: flat vs prior 30 days`;
+    reviews.delta > 0.01  ? `*+${reviews.delta.toFixed(2)}* vs prior 30 days (was ${reviews.prevAvg.toFixed(2)})` :
+    reviews.delta < -0.01 ? `*${reviews.delta.toFixed(2)}* vs prior 30 days (was ${reviews.prevAvg.toFixed(2)})` :
+                            `flat vs prior 30 days`;
   const reviewSection =
     `*:star: 4 · Average Review Score — Trailing 30 Days*\n` +
-    `${reviewEmoji} *${reviews.count > 0 ? reviews.avg.toFixed(2) : "—"} / 5*  ${stars}  _from ${reviews.count} reviews_\n` +
-    trend;
+    `*${reviews.count > 0 ? reviews.avg.toFixed(2) : "—"} / 5* · ${reviews.count} reviews · ${trend}`;
 
   const blocks: object[] = [
     {
@@ -136,7 +117,7 @@ function buildBlocks(snap: FounderSnapshot, linkUrl?: string) {
     blocks.push({
       type: "context",
       elements: [
-        { type: "mrkdwn", text: `:bar_chart: <${linkUrl}|Open the live dashboard>` },
+        { type: "mrkdwn", text: `<${linkUrl}|Open the live dashboard →>` },
       ],
     });
   }
