@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 import { buildFounderSnapshot, type FounderSnapshot } from "@/lib/founder";
 import { buildLinkToken } from "@/lib/linkToken";
 
-// Daily founder update — fires from Vercel Cron three times a day:
+// Daily founder update — fires from Vercel Cron twice a day:
 //   0 14 * * * UTC  =  09:00 AM EST  (10:00 AM EDT)
 //   0 23 * * * UTC  =  06:00 PM EST  ( 7:00 PM EDT)
-//   0  2 * * * UTC  =  09:00 PM EST  (10:00 PM EDT) [previous local day]
-// Bundled into a single cron entry "0 2,14,23 * * *" so it counts as one
-// job under the Vercel Hobby plan's 2-cron cap. Posts a rich Slack Block
-// Kit message to the founder
+// Vercel Hobby caps cron at 2 entries × 1 fire/day each, so a third slot
+// (e.g. 9 PM EST) would need a Pro upgrade or an external scheduler.
+// Posts a rich Slack Block Kit message to the founder
 // channel summarising the four headline metrics. No screenshot pipeline —
 // Vercel's runtime can't run headless Chromium reliably (libnss3 missing),
 // and a well-formatted Block Kit message is more scannable on mobile anyway.
