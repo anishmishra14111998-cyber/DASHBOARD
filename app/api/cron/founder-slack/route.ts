@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildFounderSnapshot, type FounderSnapshot } from "@/lib/founder";
 import { buildLinkToken } from "@/lib/linkToken";
+import { readWhatsAppConfig, sendWhatsAppToAll } from "@/lib/whatsapp";
 
 // Daily founder update — fires from Vercel Cron twice a day:
 //   0 14 * * * UTC  =  09:00 AM EST  (10:00 AM EDT)
@@ -173,6 +174,34 @@ async function postToSlack(snap: FounderSnapshot): Promise<void> {
   if (!json.ok) throw new Error(`chat.postMessage failed: ${json.error ?? "unknown"}`);
 }
 
+// Builds the 5 ordered body variables for the WhatsApp template
+// `founder_daily_update` (see setup guide). Each must be single-line —
+// WhatsApp rejects template params containing newlines or tabs.
+function buildWhatsAppVars(snap: FounderSnapshot): string[] {
+  const { pickup, occupancy, todayOccupancy, reviews } = snap;
+  const pace =
+    pickup.paceStatus === "ahead"  ? `ahead by ${fmtK(pickup.variance)}` :
+    pickup.paceStatus === "behind" ? `behind by ${fmtK(Math.abs(pickup.variance))}` :
+                                     "on track";
+  return [
+    fmtIstDate(),                                                                              // {{1}} date
+    `${fmtK(pickup.actualMtdRevenue)} / ${fmtK(pickup.target)} (${pickup.pctOfTarget.toFixed(0)}%), ${pace}`, // {{2}} pacing
+    `${occupancy.occupancyPct.toFixed(1)}%`,                                                   // {{3}} 30-day occupancy
+    `${todayOccupancy.occupancyPct}% (${todayOccupancy.occupied}/${todayOccupancy.totalProperties})`,         // {{4}} today
+    `${reviews.count > 0 ? reviews.avg.toFixed(2) : "—"}/5 from ${reviews.count} reviews`,     // {{5}} reviews
+  ];
+}
+
+async function sendWhatsApp(snap: FounderSnapshot): Promise<void> {
+  const cfg = readWhatsAppConfig();
+  if (!cfg) return; // not configured — silently skip
+  const results = await sendWhatsAppToAll(cfg, buildWhatsAppVars(snap));
+  const failed = results.filter((r) => !r.ok);
+  if (failed.length > 0) {
+    console.error("[founder-slack] WhatsApp partial failure:", JSON.stringify(failed));
+  }
+}
+
 function unauthorised(): Response {
   return new Response("Unauthorized", { status: 401 });
 }
@@ -187,8 +216,24 @@ export async function GET(req: Request) {
 
   try {
     const snap = await buildFounderSnapshot();
-    await retry(() => postToSlack(snap), 3, "slack-post");
-    return NextResponse.json({ ok: true, postedAt: new Date().toISOString() });
+    // Slack and WhatsApp are independent — a failure in one must not block
+    // the other. Each retries internally; we report both outcomes.
+    const [slackResult, waResult] = await Promise.allSettled([
+      retry(() => postToSlack(snap), 3, "slack-post"),
+      retry(() => sendWhatsApp(snap), 3, "whatsapp-post"),
+    ]);
+
+    const slackOk = slackResult.status === "fulfilled";
+    const waOk    = waResult.status === "fulfilled";
+    if (!slackOk) console.error("[founder-slack] Slack failed:", slackResult.reason);
+    if (!waOk)    console.error("[founder-slack] WhatsApp failed:", waResult.reason);
+
+    // 200 if at least one channel delivered; 500 only if both failed.
+    const status = slackOk || waOk ? 200 : 500;
+    return NextResponse.json(
+      { ok: slackOk || waOk, slack: slackOk, whatsapp: waOk, postedAt: new Date().toISOString() },
+      { status },
+    );
   } catch (err) {
     console.error("[founder-slack] giving up:", err);
     return NextResponse.json({ ok: false, error: (err as Error).message }, { status: 500 });
