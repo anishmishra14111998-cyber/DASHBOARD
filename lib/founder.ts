@@ -108,8 +108,10 @@ export async function buildFounderSnapshot(): Promise<FounderSnapshot> {
   for (const r of guesty.reservations) {
     if (r.status !== "confirmed") continue;
 
-    // "Pickup" = bookings *made* yesterday, by Guesty createdAt date (NY).
-    const bookedDate = r.createdAt ? r.createdAt.slice(0, 10) : null;
+    // "Pickup" = bookings *made* yesterday, by Guesty createdAt date in NY
+    // time (convert the UTC timestamp to the NY calendar day so late-night
+    // bookings land on the right date).
+    const bookedDate = r.createdAt ? nyToday(new Date(r.createdAt)) : null;
     if (bookedDate === yesterday) {
       yesterdayRevenue  += r.grossRevenue;
       yesterdayBookings += 1;
@@ -196,8 +198,10 @@ export async function buildFounderSnapshot(): Promise<FounderSnapshot> {
   for (const r of guesty.reservations) {
     if (r.status !== "confirmed") continue;
 
-    // New bookings *made* this month (booking pace), by createdAt date.
-    const booked = r.createdAt ? r.createdAt.slice(0, 10) : null;
+    // New sales = reservations *created* this month (any stay date), by NY
+    // calendar day. Confirmed only — Guesty "inquiry" rows are guest
+    // questions, not bookings, and would massively overcount if included.
+    const booked = r.createdAt ? nyToday(new Date(r.createdAt)) : null;
     if (booked && booked >= monthStart && booked <= today) {
       newBookingsCount  += 1;
       newBookingsAmount += r.grossRevenue;

@@ -28,6 +28,10 @@ const fmtK = (n: number): string =>
     ? `$${(n / 1000).toFixed(n >= 100_000 ? 0 : 1)}K`
     : `$${Math.round(n).toLocaleString()}`;
 
+// Full dollar amount, e.g. $149,774 — used where two figures could otherwise
+// collide at the same rounded $K value.
+const fmtMoney = (n: number): string => `$${Math.round(n).toLocaleString("en-US")}`;
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function retry<T>(fn: () => Promise<T>, attempts: number, label: string): Promise<T> {
@@ -103,12 +107,18 @@ function buildBlocks(snap: FounderSnapshot, linkUrl?: string) {
     `*${reviews.count > 0 ? reviews.avg.toFixed(2) : "—"} / 5* · ${reviews.count} reviews · ${trend}`;
 
   // --- 5. Bookings & Pipeline ---
+  // Use full dollar amounts here (not the $K short form) so the New-Sales
+  // and Advance-Revenue figures stay distinct instead of both rounding to
+  // the same "$150K".
   const { newBookings, nextMonth, advance } = snap;
+  const avgSale = newBookings.count > 0 ? Math.round(newBookings.amount / newBookings.count) : 0;
   const pipelineSection =
     `*:calendar: 5 · Bookings & Pipeline*\n` +
-    `New bookings (${newBookings.monthLabel}): *${newBookings.count}* · ${fmtK(newBookings.amount)}\n` +
-    `Next month (${nextMonth.monthLabel}) on the books: *${fmtK(nextMonth.bookedRevenue)}* · ${nextMonth.bookedNights.toLocaleString()} nights (${nextMonth.occupancyPct.toFixed(1)}% occ)\n` +
-    `Advance revenue (all future): *${fmtK(advance.revenue)}* across ${advance.count} bookings`;
+    `*New sales — ${newBookings.monthLabel}:* ${newBookings.count} bookings · ${fmtMoney(newBookings.amount)} ` +
+    `_(avg ${fmtMoney(avgSale)}/booking)_\n` +
+    `_All reservations created this month, any stay date — excludes inquiries & cancellations._\n` +
+    `*Next month — ${nextMonth.monthLabel} on the books:* ${fmtMoney(nextMonth.bookedRevenue)} · ${nextMonth.bookedNights.toLocaleString()} nights · ${nextMonth.occupancyPct.toFixed(1)}% occ\n` +
+    `*Advance revenue — all future stays:* ${fmtMoney(advance.revenue)} across ${advance.count} bookings`;
 
   const blocks: object[] = [
     {
@@ -149,9 +159,9 @@ function buildFallbackText(snap: FounderSnapshot): string {
     `30-day forward occupancy: ${occupancy.occupancyPct.toFixed(1)}%`,
     `Today's occupancy: ${todayOccupancy.occupancyPct}% (${todayOccupancy.occupied}/${todayOccupancy.totalProperties})`,
     `Trailing 30-day rating: ${reviews.count > 0 ? reviews.avg.toFixed(2) : "—"} from ${reviews.count} reviews`,
-    `New bookings (${snap.newBookings.monthLabel}): ${snap.newBookings.count} · ${fmtK(snap.newBookings.amount)}`,
-    `Next month booked: ${fmtK(snap.nextMonth.bookedRevenue)} · ${snap.nextMonth.bookedNights} nights`,
-    `Advance revenue: ${fmtK(snap.advance.revenue)} across ${snap.advance.count} bookings`,
+    `New sales (${snap.newBookings.monthLabel}): ${snap.newBookings.count} bookings · ${fmtMoney(snap.newBookings.amount)}`,
+    `Next month booked: ${fmtMoney(snap.nextMonth.bookedRevenue)} · ${snap.nextMonth.bookedNights} nights`,
+    `Advance revenue: ${fmtMoney(snap.advance.revenue)} across ${snap.advance.count} bookings`,
   ].join(" · ");
 }
 
@@ -201,9 +211,9 @@ function buildWhatsAppVars(snap: FounderSnapshot): string[] {
     `${occupancy.occupancyPct.toFixed(1)}%`,                                                   // {{3}} 30-day occupancy
     `${todayOccupancy.occupancyPct}% (${todayOccupancy.occupied}/${todayOccupancy.totalProperties})`,         // {{4}} today
     `${reviews.count > 0 ? reviews.avg.toFixed(2) : "—"}/5 from ${reviews.count} reviews`,     // {{5}} reviews
-    `${snap.newBookings.count} bookings, ${fmtK(snap.newBookings.amount)}`,                    // {{6}} new bookings this month
-    `${fmtK(snap.nextMonth.bookedRevenue)}, ${snap.nextMonth.bookedNights} nights`,            // {{7}} next month booked
-    `${fmtK(snap.advance.revenue)} across ${snap.advance.count} bookings`,                     // {{8}} advance revenue
+    `${snap.newBookings.count} bookings, ${fmtMoney(snap.newBookings.amount)}`,                // {{6}} new sales this month
+    `${fmtMoney(snap.nextMonth.bookedRevenue)}, ${snap.nextMonth.bookedNights} nights`,        // {{7}} next month booked
+    `${fmtMoney(snap.advance.revenue)} across ${snap.advance.count} bookings`,                 // {{8}} advance revenue
   ];
 }
 
