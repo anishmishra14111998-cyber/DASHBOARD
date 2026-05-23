@@ -85,11 +85,12 @@ function buildBlocks(snap: FounderSnapshot, linkUrl?: string) {
     `${paceText}\n` +
     `Yesterday: ${fmtK(pickup.yesterdayRevenue)} from ${pickup.yesterdayBookings} new booking${pickup.yesterdayBookings === 1 ? "" : "s"}`;
 
-  // --- 2. 30-Day Forward Occupancy ---
+  // --- 2. Portfolio Occupancy (this month + next 30 days) ---
+  const month = snap.monthOccupancy;
   const fwdSection =
-    `*:office: 2 · Portfolio Occupancy — 30-Day Forward*\n` +
-    `*${occupancy.occupancyPct.toFixed(1)}%* occupancy · ${occupancy.occupiedNights.toLocaleString()} / ${occupancy.totalNightsAvailable.toLocaleString()} nights\n` +
-    `*${(occupancy.totalNightsAvailable - occupancy.occupiedNights).toLocaleString()}* nights still open across ${occupancy.totalProperties} listings`;
+    `*:office: 2 · Portfolio Occupancy*\n` +
+    `This month (${month.monthLabel}): *${month.occupancyPct.toFixed(1)}%* · ${month.occupiedNights.toLocaleString()} / ${month.totalNightsAvailable.toLocaleString()} nights\n` +
+    `Next 30 days: *${occupancy.occupancyPct.toFixed(1)}%* · ${occupancy.occupiedNights.toLocaleString()} / ${occupancy.totalNightsAvailable.toLocaleString()} nights · ${(occupancy.totalNightsAvailable - occupancy.occupiedNights).toLocaleString()} still open`;
 
   // --- 3. Today's Occupancy ---
   const todaySection =
@@ -156,6 +157,7 @@ function buildFallbackText(snap: FounderSnapshot): string {
   return [
     `Daily Founder Update — ${fmtIstDate()}`,
     `Pacing: ${fmtK(pickup.actualMtdRevenue)} / ${fmtK(pickup.target)} (${pickup.pctOfTarget.toFixed(0)}%) · ${pace}`,
+    `This month occupancy: ${snap.monthOccupancy.occupancyPct.toFixed(1)}%`,
     `30-day forward occupancy: ${occupancy.occupancyPct.toFixed(1)}%`,
     `Today's occupancy: ${todayOccupancy.occupancyPct}% (${todayOccupancy.occupied}/${todayOccupancy.totalProperties})`,
     `Trailing 30-day rating: ${reviews.count > 0 ? reviews.avg.toFixed(2) : "—"} from ${reviews.count} reviews`,
@@ -208,12 +210,13 @@ function buildWhatsAppVars(snap: FounderSnapshot): string[] {
   return [
     fmtIstDate(),                                                                              // {{1}} date
     `${fmtK(pickup.actualMtdRevenue)} / ${fmtK(pickup.target)} (${pickup.pctOfTarget.toFixed(0)}%), ${pace}`, // {{2}} pacing
-    `${occupancy.occupancyPct.toFixed(1)}%`,                                                   // {{3}} 30-day occupancy
-    `${todayOccupancy.occupancyPct}% (${todayOccupancy.occupied}/${todayOccupancy.totalProperties})`,         // {{4}} today
-    `${reviews.count > 0 ? reviews.avg.toFixed(2) : "—"}/5 from ${reviews.count} reviews`,     // {{5}} reviews
-    `${snap.newBookings.count} bookings, ${fmtMoney(snap.newBookings.amount)}`,                // {{6}} new sales this month
-    `${fmtMoney(snap.nextMonth.bookedRevenue)}, ${snap.nextMonth.bookedNights} nights`,        // {{7}} next month booked
-    `${fmtMoney(snap.advance.revenue)} across ${snap.advance.count} bookings`,                 // {{8}} advance revenue
+    `${snap.monthOccupancy.occupancyPct.toFixed(1)}%`,                                         // {{3}} this month occupancy
+    `${occupancy.occupancyPct.toFixed(1)}%`,                                                   // {{4}} 30-day forward occupancy
+    `${todayOccupancy.occupancyPct}% (${todayOccupancy.occupied}/${todayOccupancy.totalProperties})`,         // {{5}} today
+    `${reviews.count > 0 ? reviews.avg.toFixed(2) : "—"}/5 from ${reviews.count} reviews`,     // {{6}} reviews
+    `${snap.newBookings.count} bookings, ${fmtMoney(snap.newBookings.amount)}`,                // {{7}} new sales this month
+    `${fmtMoney(snap.nextMonth.bookedRevenue)}, ${snap.nextMonth.bookedNights} nights`,        // {{8}} next month booked
+    `${fmtMoney(snap.advance.revenue)} across ${snap.advance.count} bookings`,                 // {{9}} advance revenue
   ];
 }
 

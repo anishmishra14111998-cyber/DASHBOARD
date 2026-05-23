@@ -47,6 +47,13 @@ export interface TodayOccupancyBlock {
   occupancyPct: number;             // integer
 }
 
+export interface MonthOccupancyBlock {
+  monthLabel: string;
+  occupiedNights: number;           // confirmed nights overlapping the full calendar month
+  totalNightsAvailable: number;     // properties × days in month
+  occupancyPct: number;             // one decimal
+}
+
 export interface ReviewBlock {
   windowStart: string;
   windowEnd: string;
@@ -80,6 +87,7 @@ export interface FounderSnapshot {
   generatedAt: string;
   pickup: PickupBlock;
   todayOccupancy: TodayOccupancyBlock;
+  monthOccupancy: MonthOccupancyBlock;
   occupancy: OccupancyBlock;
   reviews: ReviewBlock;
   newBookings: NewBookingsBlock;
@@ -98,7 +106,8 @@ export async function buildFounderSnapshot(): Promise<FounderSnapshot> {
   const [y, m]     = monthStart.split("-").map(Number);
   const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
   const daysElapsed = daysBetweenIso(monthStart, today) + 1;
-  const monthEndExclusive = addDaysIso(today, 1);
+  const monthEndExclusive = addDaysIso(today, 1);          // MTD end (today + 1)
+  const fullMonthEndExcl  = addDaysIso(monthStart, daysInMonth); // 1st of next month
 
   // ---- 1. Yesterday pickup + MTD stayed-revenue ----
   let yesterdayRevenue  = 0;
@@ -140,6 +149,7 @@ export async function buildFounderSnapshot(): Promise<FounderSnapshot> {
   const forwardEnd            = addDaysIso(today, 29);
   const forwardEndExclusive   = addDaysIso(forwardEnd, 1);
   let   occupiedNights        = 0;
+  let   monthOccNights        = 0;
   const occupiedTodaySet      = new Set<string>();
 
   for (const r of guesty.reservations) {
@@ -148,6 +158,10 @@ export async function buildFounderSnapshot(): Promise<FounderSnapshot> {
     const inStart = r.checkIn  > forwardStart        ? r.checkIn  : forwardStart;
     const inEnd   = r.checkOut < forwardEndExclusive ? r.checkOut : forwardEndExclusive;
     if (inStart < inEnd) occupiedNights += daysBetweenIso(inStart, inEnd);
+    // Full current calendar month (actual + booked nights within the month)
+    const inStartM = r.checkIn  > monthStart       ? r.checkIn  : monthStart;
+    const inEndM   = r.checkOut < fullMonthEndExcl ? r.checkOut : fullMonthEndExcl;
+    if (inStartM < inEndM) monthOccNights += daysBetweenIso(inStartM, inEndM);
     // Today (half-open interval: checkIn ≤ today < checkOut)
     if (r.checkIn <= today && today < r.checkOut) occupiedTodaySet.add(r.propertyId);
   }
@@ -160,6 +174,10 @@ export async function buildFounderSnapshot(): Promise<FounderSnapshot> {
   const occupiedToday    = occupiedTodaySet.size;
   const todayPct = totalProperties > 0
     ? Math.round((occupiedToday / totalProperties) * 100)
+    : 0;
+  const monthNightsAvailable = totalProperties * daysInMonth;
+  const monthOccPct = monthNightsAvailable > 0
+    ? Math.round((monthOccNights / monthNightsAvailable) * 1000) / 10
     : 0;
 
   // ---- 3. Trailing 30-day review score (+ prior 30 days for trend) ----
@@ -251,6 +269,12 @@ export async function buildFounderSnapshot(): Promise<FounderSnapshot> {
       occupied:    occupiedToday,
       vacant:      Math.max(0, totalProperties - occupiedToday),
       occupancyPct: todayPct,
+    },
+    monthOccupancy: {
+      monthLabel:           nyMonthLabel(),
+      occupiedNights:       monthOccNights,
+      totalNightsAvailable: monthNightsAvailable,
+      occupancyPct:         monthOccPct,
     },
     occupancy: {
       start: forwardStart,
