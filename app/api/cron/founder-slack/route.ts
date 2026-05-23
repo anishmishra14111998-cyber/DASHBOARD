@@ -102,16 +102,25 @@ function buildBlocks(snap: FounderSnapshot, linkUrl?: string) {
     `*:star: 4 · Average Review Score — Trailing 30 Days*\n` +
     `*${reviews.count > 0 ? reviews.avg.toFixed(2) : "—"} / 5* · ${reviews.count} reviews · ${trend}`;
 
+  // --- 5. Bookings & Pipeline ---
+  const { newBookings, nextMonth, advance } = snap;
+  const pipelineSection =
+    `*:calendar: 5 · Bookings & Pipeline*\n` +
+    `New bookings (${newBookings.monthLabel}): *${newBookings.count}* · ${fmtK(newBookings.amount)}\n` +
+    `Next month (${nextMonth.monthLabel}) on the books: *${fmtK(nextMonth.bookedRevenue)}* · ${nextMonth.bookedNights.toLocaleString()} nights (${nextMonth.occupancyPct.toFixed(1)}% occ)\n` +
+    `Advance revenue (all future): *${fmtK(advance.revenue)}* across ${advance.count} bookings`;
+
   const blocks: object[] = [
     {
       type: "header",
       text: { type: "plain_text", text: `Daily Founder Update · ${fmtIstDate()}` },
     },
     { type: "divider" },
-    { type: "section", text: { type: "mrkdwn", text: pickupSection  } },
-    { type: "section", text: { type: "mrkdwn", text: fwdSection     } },
-    { type: "section", text: { type: "mrkdwn", text: todaySection   } },
-    { type: "section", text: { type: "mrkdwn", text: reviewSection  } },
+    { type: "section", text: { type: "mrkdwn", text: pickupSection   } },
+    { type: "section", text: { type: "mrkdwn", text: fwdSection      } },
+    { type: "section", text: { type: "mrkdwn", text: todaySection    } },
+    { type: "section", text: { type: "mrkdwn", text: reviewSection   } },
+    { type: "section", text: { type: "mrkdwn", text: pipelineSection } },
   ];
 
   if (linkUrl) {
@@ -140,6 +149,9 @@ function buildFallbackText(snap: FounderSnapshot): string {
     `30-day forward occupancy: ${occupancy.occupancyPct.toFixed(1)}%`,
     `Today's occupancy: ${todayOccupancy.occupancyPct}% (${todayOccupancy.occupied}/${todayOccupancy.totalProperties})`,
     `Trailing 30-day rating: ${reviews.count > 0 ? reviews.avg.toFixed(2) : "—"} from ${reviews.count} reviews`,
+    `New bookings (${snap.newBookings.monthLabel}): ${snap.newBookings.count} · ${fmtK(snap.newBookings.amount)}`,
+    `Next month booked: ${fmtK(snap.nextMonth.bookedRevenue)} · ${snap.nextMonth.bookedNights} nights`,
+    `Advance revenue: ${fmtK(snap.advance.revenue)} across ${snap.advance.count} bookings`,
   ].join(" · ");
 }
 
@@ -189,6 +201,9 @@ function buildWhatsAppVars(snap: FounderSnapshot): string[] {
     `${occupancy.occupancyPct.toFixed(1)}%`,                                                   // {{3}} 30-day occupancy
     `${todayOccupancy.occupancyPct}% (${todayOccupancy.occupied}/${todayOccupancy.totalProperties})`,         // {{4}} today
     `${reviews.count > 0 ? reviews.avg.toFixed(2) : "—"}/5 from ${reviews.count} reviews`,     // {{5}} reviews
+    `${snap.newBookings.count} bookings, ${fmtK(snap.newBookings.amount)}`,                    // {{6}} new bookings this month
+    `${fmtK(snap.nextMonth.bookedRevenue)}, ${snap.nextMonth.bookedNights} nights`,            // {{7}} next month booked
+    `${fmtK(snap.advance.revenue)} across ${snap.advance.count} bookings`,                     // {{8}} advance revenue
   ];
 }
 

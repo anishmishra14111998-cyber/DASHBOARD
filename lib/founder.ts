@@ -5,6 +5,7 @@ import {
   daysBetweenIso,
   nyMonthLabel,
   nyMonthStartIso,
+  nyNextMonthRange,
   nyToday,
 } from "@/lib/datetime";
 
@@ -56,12 +57,34 @@ export interface ReviewBlock {
   delta: number;                    // avg - prevAvg
 }
 
+export interface NewBookingsBlock {
+  monthLabel: string;
+  count: number;       // reservations booked (createdAt) this month
+  amount: number;      // sum of gross revenue of those bookings
+}
+
+export interface NextMonthBlock {
+  monthLabel: string;
+  bookedRevenue: number;   // gross, apportioned to nights falling in next month
+  bookedNights: number;
+  occupancyPct: number;    // one decimal
+}
+
+export interface AdvanceBlock {
+  count: number;       // confirmed reservations with a future check-in
+  revenue: number;     // gross value of all those future bookings
+  throughDate: string; // furthest future checkout on the books
+}
+
 export interface FounderSnapshot {
   generatedAt: string;
   pickup: PickupBlock;
   todayOccupancy: TodayOccupancyBlock;
   occupancy: OccupancyBlock;
   reviews: ReviewBlock;
+  newBookings: NewBookingsBlock;
+  nextMonth: NextMonthBlock;
+  advance: AdvanceBlock;
 }
 
 export async function buildFounderSnapshot(): Promise<FounderSnapshot> {
@@ -160,6 +183,47 @@ export async function buildFounderSnapshot(): Promise<FounderSnapshot> {
   const avg     = count     > 0 ? sum     / count     : 0;
   const prevAvg = prevCount > 0 ? prevSum / prevCount : 0;
 
+  // ---- 4. New bookings this month, next-month on-the-books, advance revenue ----
+  const nm           = nyNextMonthRange();
+  const nmStart      = nm.start;
+  const nmEndExcl    = addDaysIso(nm.end, 1);
+  const nmDays       = daysBetweenIso(nm.start, nm.end) + 1;
+
+  let newBookingsCount = 0, newBookingsAmount = 0;
+  let nmRevenue = 0, nmNights = 0;
+  let advCount = 0, advRevenue = 0, advThrough = "";
+
+  for (const r of guesty.reservations) {
+    if (r.status !== "confirmed") continue;
+
+    // New bookings *made* this month (booking pace), by createdAt date.
+    const booked = r.createdAt ? r.createdAt.slice(0, 10) : null;
+    if (booked && booked >= monthStart && booked <= today) {
+      newBookingsCount  += 1;
+      newBookingsAmount += r.grossRevenue;
+    }
+
+    // Next month on the books — apportion gross by nights falling in next month.
+    const inStart = r.checkIn  > nmStart   ? r.checkIn  : nmStart;
+    const inEnd   = r.checkOut < nmEndExcl ? r.checkOut : nmEndExcl;
+    if (inStart < inEnd) {
+      const nights = daysBetweenIso(inStart, inEnd);
+      nmNights  += nights;
+      nmRevenue += r.grossRevenue * (nights / Math.max(1, r.nights));
+    }
+
+    // Advance revenue — full value of every future-dated booking on the books.
+    if (r.checkIn > today) {
+      advCount   += 1;
+      advRevenue += r.grossRevenue;
+      if (r.checkOut > advThrough) advThrough = r.checkOut;
+    }
+  }
+
+  const nmOccPct = totalProperties > 0
+    ? Math.round((nmNights / (totalProperties * nmDays)) * 1000) / 10
+    : 0;
+
   return {
     generatedAt: new Date().toISOString(),
     pickup: {
@@ -201,6 +265,22 @@ export async function buildFounderSnapshot(): Promise<FounderSnapshot> {
       prevCount,
       prevAvg:     Math.round(prevAvg * 100) / 100,
       delta:       Math.round((avg - prevAvg) * 100) / 100,
+    },
+    newBookings: {
+      monthLabel: nyMonthLabel(),
+      count:      newBookingsCount,
+      amount:     Math.round(newBookingsAmount),
+    },
+    nextMonth: {
+      monthLabel:    nm.label,
+      bookedRevenue: Math.round(nmRevenue),
+      bookedNights:  nmNights,
+      occupancyPct:  nmOccPct,
+    },
+    advance: {
+      count:       advCount,
+      revenue:     Math.round(advRevenue),
+      throughDate: advThrough ? advThrough.slice(0, 10) : "",
     },
   };
 }
