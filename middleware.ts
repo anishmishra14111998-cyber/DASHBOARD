@@ -70,7 +70,11 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // /api/cron/* is carved out: Vercel's cron runner can't satisfy basic auth,
-  // so those routes verify a CRON_SECRET bearer token internally instead.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/cron).*)"],
+  // Carve-outs from basic auth:
+  //   api/cron/*           — Vercel cron runner can't send basic auth; uses CRON_SECRET.
+  //   timeclock            — employee time-clock; gated by its own HR login.
+  //   api/hr/login|me|clock|logout — employee HR endpoints; gated by HR session cookie.
+  // NOTE: /hr (master dashboard) and /api/hr/attendance stay behind basic auth
+  // so only the owner sees the team-wide view.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/cron|timeclock|api/hr/(?:login|me|clock|logout)).*)"],
 };

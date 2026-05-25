@@ -12,6 +12,7 @@ const TABS = [
   { href: "/checkouts",     full: "Checkouts",                    short: "Checkouts" },
   { href: "/gross-margin",  full: "Gross Margin",                 short: "Margin" },
   { href: "/cc-portfolio",  full: "CC Portfolio Monthly",         short: "CC Portfolio" },
+  { href: "/hr",            full: "HR · Attendance",              short: "HR" },
 ];
 
 export function TabNav() {

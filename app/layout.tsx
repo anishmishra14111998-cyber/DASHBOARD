@@ -1,6 +1,5 @@
 import "./globals.css";
-import { BrandHeader } from "@/components/BrandHeader";
-import { TabNav } from "@/components/TabNav";
+import { Chrome } from "@/components/Chrome";
 
 export const metadata = {
   title: "Coveted Hospitality",
@@ -28,8 +27,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
-        <BrandHeader />
-        <TabNav />
+        <Chrome />
         {children}
       </body>
     </html>
